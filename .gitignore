@@ -1,0 +1,44 @@
+# Node / frontend
+node_modules/
+.pnpm-store/
+.yarn/
+.yarnrc.yml
+.npmrc
+.pnpm-debug.log*
+.yarn-debug.log*
+.yarn-error.log*
+npm-debug.log*
+*.log
+
+# Build outputs
+/dist/
+/build/
+/.vite/
+/.parcel-cache/
+/.turbo/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Coverage / tests
+coverage/
+.nyc_output/
+
+# Tauri / Rust
+/src-tauri/target/
+/src-tauri/.cargo/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Misc
+.cache/
+
+# this is how we are handling the configs now
+config.json
