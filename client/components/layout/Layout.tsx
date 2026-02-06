@@ -1,12 +1,6 @@
 import { useEffect, useState } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router";
-import {
-  Table2,
-  Settings,
-  Database,
-  PanelLeftClose,
-  PanelLeftOpen,
-} from "lucide-react";
+import { Table2, Folder, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function Layout() {
@@ -54,8 +48,6 @@ export function Layout() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [tables, navigate]);
 
-  const dbName = dbPath?.split("/").pop() || "Database";
-
   return (
     <div className="flex h-screen">
       <aside
@@ -64,29 +56,35 @@ export function Layout() {
           collapsed ? "w-14" : "w-64",
         )}
       >
-        <div className="flex h-14 items-center border-b px-4 gap-2 justify-between">
-          {!collapsed && (
-            <>
-              <Database className="h-5 w-5 shrink-0" />
-              <h1
-                className="text-lg font-semibold truncate flex-1"
-                title={dbPath || ""}
-              >
-                {dbName}
-              </h1>
-            </>
-          )}
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            {collapsed ? (
-              <PanelLeftOpen className="h-5 w-5" />
-            ) : (
-              <PanelLeftClose className="h-5 w-5" />
+        <div className="border-b px-4 py-3">
+          <div className="flex items-center gap-2 justify-between">
+            {!collapsed && (
+              <h1 className="text-lg font-semibold truncate flex-1">Logo</h1>
             )}
-          </button>
+            <button
+              onClick={() => setCollapsed(!collapsed)}
+              className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
+              title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              {collapsed ? (
+                <PanelLeftOpen className="h-5 w-5" />
+              ) : (
+                <PanelLeftClose className="h-5 w-5" />
+              )}
+            </button>
+          </div>
+          {!collapsed && dbPath && (
+            <button
+              onClick={() => navigate("/setup")}
+              className="flex items-center gap-2 mt-2 text-xs text-muted-foreground hover:text-foreground transition-colors truncate w-full cursor-pointer"
+              title={dbPath}
+            >
+              <Folder className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">
+                .../{dbPath.split("/").slice(-2).join("/")}
+              </span>
+            </button>
+          )}
         </div>
         <nav className="flex-1 overflow-auto p-2 space-y-1">
           {tables.map((table) => (
@@ -109,24 +107,6 @@ export function Layout() {
             </NavLink>
           ))}
         </nav>
-        <div className="border-t p-2">
-          <NavLink
-            to="/setup"
-            title={collapsed ? "Change Database" : undefined}
-            className={({ isActive }) =>
-              cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                collapsed && "justify-center px-0",
-              )
-            }
-          >
-            <Settings className="h-4 w-4 shrink-0" />
-            {!collapsed && "Change Database"}
-          </NavLink>
-        </div>
       </aside>
 
       <main className="flex-1 overflow-auto">
