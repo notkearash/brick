@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import { Outlet, NavLink, useNavigate } from "react-router";
 import { Table2, Settings, Database } from "lucide-react";
 import { cn } from "@/lib/utils";
 

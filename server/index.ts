@@ -120,7 +120,7 @@ app.post("/api/tables/:name", async (c) => {
   const body = await c.req.json();
 
   const columns = Object.keys(body);
-  const values = Object.values(body);
+  const values = Object.values(body) as import("bun:sqlite").SQLQueryBindings[];
   const placeholders = columns.map(() => "?").join(", ");
 
   try {
@@ -152,7 +152,7 @@ app.put("/api/tables/:name/:id", async (c) => {
   const setClauses = Object.keys(body)
     .map((col) => `${col} = ?`)
     .join(", ");
-  const values = [...Object.values(body), id];
+  const values = [...Object.values(body), id] as import("bun:sqlite").SQLQueryBindings[];
 
   try {
     db.query(
