@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router";
-import { Table2, Settings, Database, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import {
+  Table2,
+  Settings,
+  Database,
+  PanelLeftClose,
+  PanelLeftOpen,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function Layout() {
@@ -30,12 +36,18 @@ export function Layout() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement).tagName;
       if (e.metaKey && e.key >= "1" && e.key <= "9") {
         e.preventDefault();
         const index = parseInt(e.key) - 1;
         if (tables[index]) {
           navigate(`/table/${tables[index]}`);
         }
+      }
+
+      if (e.key === "s" && e.metaKey && !e.altKey) {
+        e.preventDefault();
+        setCollapsed((c) => !c);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -56,7 +68,10 @@ export function Layout() {
           {!collapsed && (
             <>
               <Database className="h-5 w-5 shrink-0" />
-              <h1 className="text-lg font-semibold truncate flex-1" title={dbPath || ""}>
+              <h1
+                className="text-lg font-semibold truncate flex-1"
+                title={dbPath || ""}
+              >
                 {dbName}
               </h1>
             </>
