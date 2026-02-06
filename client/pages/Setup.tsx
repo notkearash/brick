@@ -9,7 +9,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Database } from "lucide-react";
 
 export function Setup() {
   const [error, setError] = useState("");
@@ -56,7 +55,7 @@ export function Setup() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <Database className="h-12 w-12 text-muted-foreground" />
+            <img src="/no-text.svg" alt="Brick" className="h-16" />
           </div>
           <CardTitle>Brick</CardTitle>
           <CardDescription>SQLite database browser</CardDescription>

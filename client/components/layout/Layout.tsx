@@ -59,7 +59,7 @@ export function Layout() {
         <div className="border-b px-4 py-3">
           <div className="flex items-center gap-2 justify-between">
             {!collapsed && (
-              <h1 className="text-lg font-semibold truncate flex-1">Logo</h1>
+              <img src="/with-text.svg" alt="Brick" className="h-8" />
             )}
             <button
               onClick={() => setCollapsed(!collapsed)}
