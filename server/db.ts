@@ -48,3 +48,50 @@ export function closeDb(): void {
     db = null;
   }
 }
+
+export function reconnectDb(): Database | null {
+  closeDb();
+  return getDb();
+}
+
+export function isBricked(database: Database): boolean {
+  const row = database
+    .query(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='_brick_preferences'",
+    )
+    .get();
+  return !!row;
+}
+
+export function brickUp(database: Database): void {
+  database.run(`
+    CREATE TABLE IF NOT EXISTS _brick_preferences (
+      key   TEXT NOT NULL,
+      scope TEXT NOT NULL DEFAULT '',
+      value TEXT NOT NULL,
+      PRIMARY KEY (key, scope)
+    )
+  `);
+}
+
+export async function copyAndBrick(
+  sourcePath: string,
+  destPath: string,
+): Promise<void> {
+  const sourceDb = new Database(sourcePath);
+  try {
+    sourceDb.run("PRAGMA wal_checkpoint(TRUNCATE)");
+  } finally {
+    sourceDb.close();
+  }
+
+  const sourceFile = Bun.file(sourcePath);
+  await Bun.write(destPath, sourceFile);
+
+  const destDb = new Database(destPath);
+  try {
+    brickUp(destDb);
+  } finally {
+    destDb.close();
+  }
+}
