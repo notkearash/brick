@@ -98,11 +98,11 @@ export function Layout() {
         )}
       >
         {!collapsed && (
-          <div className="border-b">
+          <div className="border-b h-10 shrink-0">
             <DropdownMenu onOpenChange={(open) => { if (open && showPing) setPingDismissed(true); }}>
               <DropdownMenuTrigger asChild>
                 <button
-                  className="group flex items-center justify-between w-full cursor-pointer px-3 py-2.5 focus:outline-none"
+                  className="group flex items-center justify-between w-full h-full cursor-pointer px-3 focus:outline-none"
                   title={dbPath ?? undefined}
                 >
                   <span className="flex items-center gap-2">
