@@ -3,6 +3,34 @@ import { useParams } from "react-router";
 import { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/data-table/DataTable";
 
+function CellContent({ value }: { value: unknown }) {
+  const [expanded, setExpanded] = useState(false);
+
+  if (value === null)
+    return <span className="text-muted-foreground">NULL</span>;
+  if (typeof value === "boolean") return <>{value ? "true" : "false"}</>;
+
+  const str = typeof value === "object" ? JSON.stringify(value) : String(value);
+  const isLong = str.length > 60;
+
+  if (!isLong) return <span className="whitespace-nowrap">{str}</span>;
+
+  return (
+    <button
+      type="button"
+      onClick={() => setExpanded((e) => !e)}
+      className={
+        expanded
+          ? "text-left whitespace-pre-wrap break-words max-w-md"
+          : "text-left truncate block max-w-[200px] cursor-pointer hover:text-foreground/80"
+      }
+      title={expanded ? "Click to collapse" : "Click to expand"}
+    >
+      {expanded ? str : str.slice(0, 60) + "…"}
+    </button>
+  );
+}
+
 interface SchemaColumn {
   cid: number;
   name: string;
@@ -69,16 +97,7 @@ export function TableView() {
   const columns: ColumnDef<Record<string, unknown>>[] = schema.map((col) => ({
     accessorKey: col.name,
     header: col.name,
-    cell: ({ getValue }) => {
-      const value = getValue();
-      if (value === null)
-        return <span className="text-muted-foreground">NULL</span>;
-      if (typeof value === "boolean") return value ? "true" : "false";
-      if (typeof value === "object") return JSON.stringify(value);
-      const str = String(value);
-      if (str.length > 100) return str.slice(0, 100) + "...";
-      return str;
-    },
+    cell: ({ getValue }) => <CellContent value={getValue()} />,
   }));
 
   const searchCol = schema.find(
