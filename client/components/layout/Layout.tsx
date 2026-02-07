@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router";
-import { Table2, Folder, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Table2, Folder } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function Layout() {
@@ -61,24 +61,9 @@ export function Layout() {
           collapsed ? "w-14" : "w-64",
         )}
       >
-        <div className="border-b px-4 py-3">
-          <div className="flex items-center gap-2 justify-between">
-            {!collapsed && (
-              <img src="/with-text.svg" alt="Brick" className="h-8" />
-            )}
-            <button
-              onClick={() => setCollapsed(!collapsed)}
-              className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
-              title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            >
-              {collapsed ? (
-                <PanelLeftOpen className="h-5 w-5" />
-              ) : (
-                <PanelLeftClose className="h-5 w-5" />
-              )}
-            </button>
-          </div>
-          {!collapsed && dbPath && (
+        {!collapsed && <div className="border-b px-4 py-3">
+          <img src="/with-text.svg" alt="Brick" className="h-8" />
+          {dbPath && (
             <button
               onClick={() => navigate("/setup")}
               className="flex items-center gap-2 mt-2 text-xs text-muted-foreground hover:text-foreground transition-colors truncate w-full cursor-pointer"
@@ -90,7 +75,7 @@ export function Layout() {
               </span>
             </button>
           )}
-        </div>
+        </div>}
         <nav className="flex-1 overflow-auto p-2 space-y-1">
           {tables.map((table) => (
             <NavLink

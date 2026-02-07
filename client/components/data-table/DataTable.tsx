@@ -27,7 +27,7 @@ import {
   PanelLeftOpen,
   ListFilter,
   Columns3,
-  Plus,
+  Lock,
   ChevronLeft,
   ChevronRight,
   RefreshCw,
@@ -212,9 +212,9 @@ export function DataTable<TData, TValue>({
             )}
           </div>
 
-          <Button size="sm" className="h-7 px-3 text-xs gap-1 ml-1">
-            <Plus className="h-3.5 w-3.5" />
-            Add record
+          <Button variant="secondary" size="sm" className="h-7 px-3 text-xs gap-1 ml-1 !cursor-not-allowed" disabled>
+            <Lock className="h-3 w-3" />
+            Read-only
           </Button>
         </div>
 
