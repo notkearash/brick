@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router";
-import { Table2, LayoutGrid, List, Folder, Copy, DatabaseZap, ToyBrick, Users, Ban } from "lucide-react";
+import { Table2, LayoutGrid, List, Folder, Copy, DatabaseZap, ToyBrick, Users, Ban, Settings } from "lucide-react";
 import { useBrickStatus } from "@/lib/useBrickStatus";
 import { BrickUpDialog } from "@/components/BrickUpDialog";
 import { cn } from "@/lib/utils";
@@ -309,6 +309,23 @@ export function Layout() {
             })}
           </TooltipProvider>
         </nav>
+        <div className="border-t p-2">
+          <NavLink
+            to="/settings"
+            className={({ isActive }) =>
+              cn(
+                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                isActive
+                  ? "text-primary"
+                  : "text-muted-foreground opacity-60 hover:opacity-100",
+                collapsed && "justify-center px-0",
+              )
+            }
+          >
+            <Settings className="h-4 w-4 shrink-0" />
+            {!collapsed && "Settings"}
+          </NavLink>
+        </div>
       </aside>
 
       <main className="flex-1 min-w-0 min-h-0 overflow-hidden">
