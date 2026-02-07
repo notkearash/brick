@@ -22,8 +22,11 @@ export function Layout() {
   const [dbPath, setDbPath] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState(false);
   const [showBrickDialog, setShowBrickDialog] = useState(false);
+  const [pingDismissed, setPingDismissed] = useState(false);
   const navigate = useNavigate();
   const { bricked, refresh: refreshBrickStatus } = useBrickStatus();
+
+  const showPing = bricked === false && !pingDismissed;
 
   const loadDb = useCallback(() => {
     fetch("/api/config")
@@ -83,17 +86,30 @@ export function Layout() {
       >
         {!collapsed && (
           <div className="border-b">
-            <DropdownMenu>
+            <DropdownMenu onOpenChange={(open) => { if (open && showPing) setPingDismissed(true); }}>
               <DropdownMenuTrigger asChild>
                 <button
                   className="group flex items-center justify-between w-full cursor-pointer px-3 py-2.5 focus:outline-none"
                   title={dbPath ?? undefined}
                 >
-                  <img
-                    src="/with-text.svg"
-                    alt="Brick"
-                    className="h-6 opacity-60 group-hover:opacity-100 transition-opacity"
-                  />
+                  <span className="flex items-center gap-2">
+                    {showPing && (
+                      <span className="flex h-2.5 w-2.5 shrink-0">
+                        <span className="animate-ping absolute inline-flex h-2.5 w-2.5 rounded-full bg-primary opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary" />
+                      </span>
+                    )}
+                    <img
+                      src="/with-text.svg"
+                      alt="Brick"
+                      className={cn(
+                        "h-6 transition-opacity",
+                        bricked === false
+                          ? "opacity-40 grayscale group-hover:opacity-70"
+                          : "opacity-60 group-hover:opacity-100",
+                      )}
+                    />
+                  </span>
                   {dbPath && (
                     <span className="flex items-center gap-1.5 text-xs text-muted-foreground group-hover:text-foreground transition-colors">
                       <Folder className="h-3.5 w-3.5" />
@@ -103,6 +119,15 @@ export function Layout() {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
+                {bricked === false && (
+                  <DropdownMenuItem onClick={() => setShowBrickDialog(true)}>
+                    <span className="relative mr-2">
+                      <ToyBrick className="h-3.5 w-3.5" />
+                      <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-primary" />
+                    </span>
+                    Brick it up
+                  </DropdownMenuItem>
+                )}
                 {dbPath && (
                   <DropdownMenuItem
                     onClick={() => navigator.clipboard.writeText(dbPath)}
@@ -115,12 +140,6 @@ export function Layout() {
                   <DatabaseZap className="h-3.5 w-3.5 mr-2" />
                   Change database
                 </DropdownMenuItem>
-                {bricked === false && (
-                  <DropdownMenuItem onClick={() => setShowBrickDialog(true)}>
-                    <ToyBrick className="h-3.5 w-3.5 mr-2" />
-                    Brick it up
-                  </DropdownMenuItem>
-                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
