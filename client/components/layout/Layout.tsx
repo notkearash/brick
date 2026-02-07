@@ -93,7 +93,7 @@ export function Layout() {
     <div className="flex h-screen">
       <aside
         className={cn(
-          "border-r bg-card flex flex-col transition-[width] duration-200",
+          "border-r bg-card flex flex-col shrink-0 transition-[width] duration-200",
           collapsed ? "w-14" : "w-64",
         )}
       >
@@ -311,7 +311,7 @@ export function Layout() {
         </nav>
       </aside>
 
-      <main className="flex-1 min-h-0">
+      <main className="flex-1 min-w-0 min-h-0 overflow-hidden">
         <Outlet
           context={{ collapsed, setCollapsed, bricked, refreshBrickStatus }}
         />
