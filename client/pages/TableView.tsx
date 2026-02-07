@@ -60,10 +60,10 @@ export function TableView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const fetchData = useCallback(() => {
+  const fetchData = useCallback((showLoading = true) => {
     if (!tableName) return;
 
-    setLoading(true);
+    if (showLoading) setLoading(true);
     setError("");
 
     Promise.all([
@@ -133,7 +133,7 @@ export function TableView() {
       sidebarCollapsed={collapsed}
       onToggleSidebar={() => setCollapsed((c: boolean) => !c)}
       totalRows={data.total}
-      onRefresh={fetchData}
+      onRefresh={() => fetchData(false)}
     />
   );
 }

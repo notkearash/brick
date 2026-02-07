@@ -73,6 +73,9 @@ export function DataTable<TData, TValue>({
     onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
+    initialState: {
+      pagination: { pageSize: 50 },
+    },
     state: {
       sorting,
       columnFilters,
@@ -95,6 +98,25 @@ export function DataTable<TData, TValue>({
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "r" && e.metaKey) {
+        e.preventDefault();
+        onRefresh?.();
+        return;
+      }
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (e.key === "[" && table.getCanPreviousPage()) {
+        table.previousPage();
+      } else if (e.key === "]" && table.getCanNextPage()) {
+        table.nextPage();
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [table]);
 
   const filterValue = searchKey
     ? ((table.getColumn(searchKey)?.getFilterValue() as string) ?? "")
@@ -212,8 +234,19 @@ export function DataTable<TData, TValue>({
           >
             <ChevronLeft className="h-3.5 w-3.5" />
           </Button>
-          <span className="text-xs tabular-nums min-w-[60px] text-center text-muted-foreground">
-            {table.getState().pagination.pageIndex + 1} / {table.getPageCount()}
+          <select
+            value={table.getState().pagination.pageSize}
+            onChange={(e) => { table.setPageSize(Number(e.target.value)); e.target.blur(); }}
+            className="h-7 bg-transparent text-xs tabular-nums text-muted-foreground border rounded px-1 cursor-pointer"
+          >
+            {[25, 50, 100, 250].map((size) => (
+              <option key={size} value={size}>
+                {size}
+              </option>
+            ))}
+          </select>
+          <span className="text-xs tabular-nums text-muted-foreground">
+            {table.getState().pagination.pageIndex + 1}/{table.getPageCount()}
           </span>
           <Button
             variant="ghost"
