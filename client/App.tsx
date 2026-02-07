@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router'
 import { Layout } from './components/layout/Layout'
 import { Setup } from './pages/Setup'
 import { TableView } from './pages/TableView'
+import { Settings } from './pages/Settings'
 
 export default function App() {
   return (
@@ -10,6 +11,7 @@ export default function App() {
       <Route path="/" element={<Layout />}>
         <Route index element={<Home />} />
         <Route path="table/:tableName" element={<TableView />} />
+        <Route path="settings" element={<Settings />} />
       </Route>
     </Routes>
   )

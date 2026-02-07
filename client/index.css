@@ -11,7 +11,7 @@
 @plugin "tailwindcss-animate";
 @import "tw-animate-css";
 
-@custom-variant dark (@media (prefers-color-scheme: dark));
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
     --radius-sm: calc(var(--radius) - 4px);
@@ -89,8 +89,7 @@
     --sidebar-ring: oklch(0.705 0.015 286.067);
 }
 
-@media (prefers-color-scheme: dark) {
-    :root {
+.dark {
         --background: oklch(0.141 0.005 285.823);
         --foreground: oklch(0.985 0 0);
         --card: oklch(0.21 0.006 285.885);
@@ -122,7 +121,6 @@
         --sidebar-accent-foreground: oklch(0.28 0.07 46);
         --sidebar-border: oklch(1 0 0 / 10%);
         --sidebar-ring: oklch(0.552 0.016 285.938);
-    }
 }
 
 @layer base {

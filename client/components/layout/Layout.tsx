@@ -43,6 +43,11 @@ export function Layout() {
         e.preventDefault();
         setCollapsed((c) => !c);
       }
+
+      if (e.key === "," && e.metaKey) {
+        e.preventDefault();
+        navigate("/settings");
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
