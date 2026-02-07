@@ -2,6 +2,12 @@ import { useEffect, useState } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router";
 import { Table2, Folder } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export function Layout() {
   const [tables, setTables] = useState<string[]>([]);
@@ -77,25 +83,34 @@ export function Layout() {
           )}
         </div>}
         <nav className="flex-1 overflow-auto p-2 space-y-1">
-          {tables.map((table) => (
-            <NavLink
-              key={table}
-              to={`/table/${table}`}
-              title={collapsed ? table : undefined}
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                  isActive
-                    ? "ring-1 ring-primary text-primary"
-                    : "text-muted-foreground hover:ring-1 hover:ring-ring",
-                  collapsed && "justify-center px-0",
-                )
-              }
-            >
-              <Table2 className="h-4 w-4 shrink-0" />
-              {!collapsed && table}
-            </NavLink>
-          ))}
+          <TooltipProvider delayDuration={300}>
+            {tables.map((table) => (
+              <Tooltip key={table} open={collapsed ? undefined : false}>
+                <TooltipTrigger asChild>
+                  <div>
+                    <NavLink
+                      to={`/table/${table}`}
+                      className={({ isActive }) =>
+                        cn(
+                          "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                          isActive
+                            ? "ring-1 ring-primary text-primary"
+                            : "text-muted-foreground hover:ring-1 hover:ring-ring",
+                          collapsed && "justify-center px-0",
+                        )
+                      }
+                    >
+                      <Table2 className="h-4 w-4 shrink-0" />
+                      {!collapsed && table}
+                    </NavLink>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  {table}
+                </TooltipContent>
+              </Tooltip>
+            ))}
+          </TooltipProvider>
         </nav>
       </aside>
 
