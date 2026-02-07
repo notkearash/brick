@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useParams } from "react-router";
+import { useCallback, useEffect, useState } from "react";
+import { useParams, useOutletContext } from "react-router";
 import { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/data-table/DataTable";
 
@@ -47,14 +47,20 @@ interface TableData {
   offset: number;
 }
 
+interface LayoutContext {
+  collapsed: boolean;
+  setCollapsed: (v: boolean | ((prev: boolean) => boolean)) => void;
+}
+
 export function TableView() {
   const { tableName } = useParams<{ tableName: string }>();
+  const { collapsed, setCollapsed } = useOutletContext<LayoutContext>();
   const [schema, setSchema] = useState<SchemaColumn[]>([]);
   const [data, setData] = useState<TableData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
+  const fetchData = useCallback(() => {
     if (!tableName) return;
 
     setLoading(true);
@@ -76,22 +82,32 @@ export function TableView() {
       .finally(() => setLoading(false));
   }, [tableName]);
 
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">Loading...</div>
+      <div className="flex items-center justify-center h-full text-muted-foreground">
+        Loading...
+      </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-64 text-destructive">
+      <div className="flex items-center justify-center h-full text-destructive">
         {error}
       </div>
     );
   }
 
   if (!data || !schema.length) {
-    return <div className="flex items-center justify-center h-64">No data</div>;
+    return (
+      <div className="flex items-center justify-center h-full text-muted-foreground">
+        No data
+      </div>
+    );
   }
 
   const columns: ColumnDef<Record<string, unknown>>[] = schema.map((col) => ({
@@ -107,21 +123,17 @@ export function TableView() {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">{tableName}</h1>
-          <p className="text-sm text-muted-foreground">{data.total} rows</p>
-        </div>
-      </div>
-      <DataTable
-        columns={columns}
-        data={data.rows}
-        searchKey={searchCol?.name}
-        searchPlaceholder={
-          searchCol ? `Search by ${searchCol.name}...` : undefined
-        }
-      />
-    </div>
+    <DataTable
+      columns={columns}
+      data={data.rows}
+      searchKey={searchCol?.name}
+      searchPlaceholder={
+        searchCol ? `Search by ${searchCol.name}...` : undefined
+      }
+      sidebarCollapsed={collapsed}
+      onToggleSidebar={() => setCollapsed((c: boolean) => !c)}
+      totalRows={data.total}
+      onRefresh={fetchData}
+    />
   );
 }

@@ -109,10 +109,8 @@ export function Layout() {
         </nav>
       </aside>
 
-      <main className="flex-1 overflow-auto">
-        <div className="p-6">
-          <Outlet />
-        </div>
+      <main className="flex-1 min-h-0">
+        <Outlet context={{ collapsed, setCollapsed }} />
       </main>
     </div>
   );
