@@ -1,7 +1,16 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { serveStatic } from "hono/bun";
-import { getDb, getConfig, setConfig, closeDb } from "./db";
+import {
+  getDb,
+  getConfig,
+  setConfig,
+  closeDb,
+  reconnectDb,
+  isBricked,
+  brickUp,
+  copyAndBrick,
+} from "./db";
 
 const app = new Hono();
 
@@ -47,7 +56,7 @@ app.get("/api/tables", (c) => {
   const tables = db
     .query(
       `SELECT name FROM sqlite_master
-       WHERE type='table' AND name NOT LIKE 'sqlite_%'
+       WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_brick_%'
        ORDER BY name`,
     )
     .all() as { name: string }[];
@@ -152,7 +161,10 @@ app.put("/api/tables/:name/:id", async (c) => {
   const setClauses = Object.keys(body)
     .map((col) => `${col} = ?`)
     .join(", ");
-  const values = [...Object.values(body), id] as import("bun:sqlite").SQLQueryBindings[];
+  const values = [
+    ...Object.values(body),
+    id,
+  ] as import("bun:sqlite").SQLQueryBindings[];
 
   try {
     db.query(
@@ -184,6 +196,127 @@ app.delete("/api/tables/:name/:id", (c) => {
     return c.json({ success: true });
   } catch (e) {
     return c.json({ error: `Delete failed: ${e}` }, 400);
+  }
+});
+
+app.get("/api/brick/status", (c) => {
+  const db = getDb();
+  if (!db) {
+    return c.json({ error: "No database configured" }, 400);
+  }
+  return c.json({ bricked: isBricked(db) });
+});
+
+app.post("/api/brick/up", async (c) => {
+  const db = getDb();
+  if (!db) {
+    return c.json({ error: "No database configured" }, 400);
+  }
+
+  const body = await c.req.json();
+  const { mode } = body;
+
+  if (mode === "copy") {
+    const { destPath } = body;
+    if (!destPath) {
+      return c.json({ error: "destPath is required for copy mode" }, 400);
+    }
+    const config = getConfig();
+    if (!config.dbPath) {
+      return c.json({ error: "No database configured" }, 400);
+    }
+    try {
+      await copyAndBrick(config.dbPath, destPath);
+      closeDb();
+      setConfig({ dbPath: destPath });
+      reconnectDb();
+      return c.json({ success: true, dbPath: destPath });
+    } catch (e) {
+      return c.json({ error: `Copy failed: ${e}` }, 500);
+    }
+  }
+
+  try {
+    brickUp(db);
+    return c.json({ success: true });
+  } catch (e) {
+    return c.json({ error: `Brick up failed: ${e}` }, 500);
+  }
+});
+
+app.get("/api/brick/preferences", (c) => {
+  const db = getDb();
+  if (!db) {
+    return c.json({ error: "No database configured" }, 400);
+  }
+  if (!isBricked(db)) {
+    return c.json({ error: "Database is not bricked" }, 400);
+  }
+
+  const scope = c.req.query("scope");
+  let rows;
+  if (scope !== undefined) {
+    rows = db
+      .query("SELECT key, scope, value FROM _brick_preferences WHERE scope = ?")
+      .all(scope);
+  } else {
+    rows = db.query("SELECT key, scope, value FROM _brick_preferences").all();
+  }
+  return c.json({ preferences: rows });
+});
+
+app.put("/api/brick/preferences", async (c) => {
+  const db = getDb();
+  if (!db) {
+    return c.json({ error: "No database configured" }, 400);
+  }
+  if (!isBricked(db)) {
+    return c.json({ error: "Database is not bricked" }, 400);
+  }
+
+  const body = await c.req.json();
+  const { key, value, scope = "" } = body;
+  if (!key || value === undefined) {
+    return c.json({ error: "key and value are required" }, 400);
+  }
+
+  try {
+    db.query(
+      "INSERT OR REPLACE INTO _brick_preferences (key, scope, value) VALUES (?, ?, ?)",
+    ).run(
+      key,
+      scope,
+      typeof value === "string" ? value : JSON.stringify(value),
+    );
+    return c.json({ success: true });
+  } catch (e) {
+    return c.json({ error: `Upsert failed: ${e}` }, 500);
+  }
+});
+
+app.delete("/api/brick/preferences", async (c) => {
+  const db = getDb();
+  if (!db) {
+    return c.json({ error: "No database configured" }, 400);
+  }
+  if (!isBricked(db)) {
+    return c.json({ error: "Database is not bricked" }, 400);
+  }
+
+  const body = await c.req.json();
+  const { key, scope = "" } = body;
+  if (!key) {
+    return c.json({ error: "key is required" }, 400);
+  }
+
+  try {
+    db.query("DELETE FROM _brick_preferences WHERE key = ? AND scope = ?").run(
+      key,
+      scope,
+    );
+    return c.json({ success: true });
+  } catch (e) {
+    return c.json({ error: `Delete failed: ${e}` }, 500);
   }
 });
 
