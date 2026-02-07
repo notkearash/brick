@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+@font-face {
+    font-family: "Geist Mono";
+    src: url("/GeistMono-Variable.woff2") format("woff2");
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+}
+
 @plugin "tailwindcss-animate";
 @import "tw-animate-css";
 
@@ -123,5 +131,6 @@
     }
     body {
         @apply bg-background text-foreground;
+        font-family: "Geist Mono", monospace;
     }
 }
