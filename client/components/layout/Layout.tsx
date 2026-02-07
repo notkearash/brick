@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router";
-import { Table2, Folder } from "lucide-react";
+import { Table2, Folder, Copy, DatabaseZap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
@@ -8,6 +8,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export function Layout() {
   const [tables, setTables] = useState<string[]>([]);
@@ -67,19 +73,30 @@ export function Layout() {
           collapsed ? "w-14" : "w-64",
         )}
       >
-        {!collapsed && <div className="border-b px-4 py-3">
-          <img src="/with-text.svg" alt="Brick" className="h-8" />
+        {!collapsed && <div className="border-b px-4 py-3 flex items-center gap-2">
+          <img src="/with-text.svg" alt="Brick" className="h-6" />
           {dbPath && (
-            <button
-              onClick={() => navigate("/setup")}
-              className="flex items-center gap-2 mt-2 text-xs text-muted-foreground hover:text-foreground transition-colors truncate w-full cursor-pointer"
-              title={dbPath}
-            >
-              <Folder className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">
-                .../{dbPath.split("/").slice(-2).join("/")}
-              </span>
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0 ml-auto"
+                  title={dbPath}
+                >
+                  <Folder className="h-3.5 w-3.5" />
+                  <span>../{dbPath.split("/").pop()}</span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => navigator.clipboard.writeText(dbPath)}>
+                  <Copy className="h-3.5 w-3.5 mr-2" />
+                  Copy full path
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/setup")}>
+                  <DatabaseZap className="h-3.5 w-3.5 mr-2" />
+                  Change database
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </div>}
         <nav className="flex-1 overflow-auto p-2 space-y-1">
