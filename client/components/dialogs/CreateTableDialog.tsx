@@ -101,13 +101,18 @@ export function CreateTableDialog({ onClose, onCreated }: CreateTableDialogProps
           />
         </div>
 
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={autoId}
-            onChange={(e) => setAutoId(e.target.checked)}
-            className="accent-primary"
-          />
+        <label className="flex items-center gap-2 text-sm cursor-pointer" onClick={() => setAutoId((v) => !v)}>
+          <span
+            className={`h-4 w-4 border flex items-center justify-center shrink-0 ${
+              autoId
+                ? "bg-primary border-primary text-primary-foreground"
+                : "border-muted-foreground/40"
+            }`}
+          >
+            {autoId && (
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square"/></svg>
+            )}
+          </span>
           Auto-add <code className="text-xs bg-muted px-1 rounded">id INTEGER PRIMARY KEY</code>
         </label>
 
