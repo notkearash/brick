@@ -2,13 +2,14 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import {
   ColumnDef,
   ColumnFiltersState,
+  PaginationState,
   RowSelectionState,
   SortingState,
   VisibilityState,
+  OnChangeFn,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
-  getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
@@ -60,6 +61,9 @@ interface DataTableProps<TData, TValue> {
   sidebarCollapsed?: boolean;
   onToggleSidebar?: () => void;
   totalRows?: number;
+  pagination?: PaginationState;
+  onPaginationChange?: OnChangeFn<PaginationState>;
+  pageCount?: number;
   onRefresh?: () => void;
   tableName?: string;
   pkColumn?: string;
@@ -76,6 +80,9 @@ export function DataTable<TData, TValue>({
   sidebarCollapsed,
   onToggleSidebar,
   totalRows,
+  pagination,
+  onPaginationChange,
+  pageCount,
   onRefresh,
   tableName,
   pkColumn,
@@ -152,7 +159,10 @@ export function DataTable<TData, TValue>({
     data,
     columns: allColumns,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
+    manualPagination: !!pagination,
+    ...(pagination
+      ? { pageCount, onPaginationChange }
+      : {}),
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
     onColumnFiltersChange: setColumnFilters,
@@ -160,16 +170,12 @@ export function DataTable<TData, TValue>({
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
     enableRowSelection: editMode,
-    initialState: {
-      pagination: {
-        pageSize: Number(localStorage.getItem("brick-page-size")) || 50,
-      },
-    },
     state: {
       sorting,
       columnFilters,
       columnVisibility,
       rowSelection,
+      ...(pagination ? { pagination } : {}),
     },
   });
 
@@ -424,7 +430,7 @@ export function DataTable<TData, TValue>({
           </Button>
           <select
             value={table.getState().pagination.pageSize}
-            onChange={(e) => { const s = Number(e.target.value); table.setPageSize(s); localStorage.setItem("brick-page-size", String(s)); e.target.blur(); }}
+            onChange={(e) => { const s = Number(e.target.value); table.setPageSize(s); table.setPageIndex(0); localStorage.setItem("brick-page-size", String(s)); e.target.blur(); }}
             className="h-7 bg-transparent text-xs tabular-nums text-muted-foreground border rounded px-1 cursor-pointer"
           >
             {[25, 50, 100, 250].map((size) => (

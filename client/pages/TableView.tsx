@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, useOutletContext } from "react-router";
-import { ColumnDef } from "@tanstack/react-table";
+import { ColumnDef, PaginationState } from "@tanstack/react-table";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { DataTable } from "@/components/data-table/DataTable";
 
@@ -58,22 +58,36 @@ export function TableView() {
   const { tableName } = useParams<{ tableName: string }>();
   const { collapsed, setCollapsed, editMode } = useOutletContext<LayoutContext>();
   const queryClient = useQueryClient();
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: Number(localStorage.getItem("brick-page-size")) || 50,
+  });
 
-  const { data: tableResult, isLoading, error } = useQuery({
-    queryKey: ["table", tableName],
+  const { data: schemaResult } = useQuery({
+    queryKey: ["table-schema", tableName],
     queryFn: async () => {
-      const [schemaData, tableData] = await Promise.all([
-        fetch(`/api/tables/${tableName}/schema`).then((r) => r.json()),
-        fetch(`/api/tables/${tableName}`).then((r) => r.json()),
-      ]);
-      if (schemaData.error) throw new Error(schemaData.error);
-      return { schema: schemaData.columns as SchemaColumn[], data: tableData as TableData };
+      const res = await fetch(`/api/tables/${tableName}/schema`).then((r) => r.json());
+      if (res.error) throw new Error(res.error);
+      return res.columns as SchemaColumn[];
     },
     enabled: !!tableName,
   });
 
-  const schema = tableResult?.schema ?? [];
-  const data = tableResult?.data ?? null;
+  const { data: tableResult, isLoading, error } = useQuery({
+    queryKey: ["table", tableName, pagination.pageIndex, pagination.pageSize],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        limit: String(pagination.pageSize),
+        offset: String(pagination.pageIndex * pagination.pageSize),
+      });
+      return fetch(`/api/tables/${tableName}?${params}`).then((r) => r.json()) as Promise<TableData>;
+    },
+    enabled: !!tableName,
+    placeholderData: (prev) => prev,
+  });
+
+  const schema = schemaResult ?? [];
+  const data = tableResult ?? null;
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["table", tableName] });
 
@@ -126,6 +140,9 @@ export function TableView() {
       sidebarCollapsed={collapsed}
       onToggleSidebar={() => setCollapsed((c: boolean) => !c)}
       totalRows={data.total}
+      pagination={pagination}
+      onPaginationChange={setPagination}
+      pageCount={Math.ceil(data.total / pagination.pageSize)}
       onRefresh={invalidate}
       tableName={tableName}
       pkColumn={pkColumn}
