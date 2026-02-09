@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import {
   ColumnDef,
   ColumnFiltersState,
+  RowSelectionState,
   SortingState,
   VisibilityState,
   flexRender,
@@ -27,8 +28,8 @@ import {
   PanelLeftOpen,
   ListFilter,
   Columns3,
-  Lock,
-  Pencil,
+  Plus,
+  Trash2,
   ChevronLeft,
   ChevronRight,
   RefreshCw,
@@ -63,6 +64,8 @@ interface DataTableProps<TData, TValue> {
   tableName?: string;
   pkColumn?: string;
   schema?: SchemaColumn[];
+  editMode?: boolean;
+  onDeleteRows?: (rows: TData[]) => Promise<void>;
 }
 
 export function DataTable<TData, TValue>({
@@ -77,13 +80,16 @@ export function DataTable<TData, TValue>({
   tableName,
   pkColumn,
   schema,
+  editMode = false,
+  onDeleteRows,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [filterOpen, setFilterOpen] = useState(false);
   const [columnsOpen, setColumnsOpen] = useState(false);
-  const [editMode, setEditMode] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
   const [editValue, setEditValue] = useState("");
   const [editError, setEditError] = useState("");
@@ -93,9 +99,58 @@ export function DataTable<TData, TValue>({
   const columnsRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
 
+  const selectColumn: ColumnDef<TData, TValue> = {
+    id: "_select",
+    header: ({ table: t }) => {
+      const checked = t.getIsAllPageRowsSelected();
+      const indeterminate = t.getIsSomePageRowsSelected();
+      return (
+        <button
+          className={cn(
+            "h-3.5 w-3.5 border flex items-center justify-center cursor-pointer",
+            checked || indeterminate
+              ? "bg-primary border-primary text-primary-foreground"
+              : "border-muted-foreground/40",
+          )}
+          onClick={t.getToggleAllPageRowsSelectedHandler()}
+        >
+          {checked ? (
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square"/></svg>
+          ) : indeterminate ? (
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2.5 5h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square"/></svg>
+          ) : null}
+        </button>
+      );
+    },
+    cell: ({ row }) => {
+      const checked = row.getIsSelected();
+      return (
+        <button
+          className={cn(
+            "h-3.5 w-3.5 border flex items-center justify-center cursor-pointer",
+            checked
+              ? "bg-primary border-primary text-primary-foreground"
+              : "border-muted-foreground/40",
+          )}
+          onClick={row.getToggleSelectedHandler()}
+        >
+          {checked && (
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square"/></svg>
+          )}
+        </button>
+      );
+    },
+    enableSorting: false,
+    enableHiding: false,
+  };
+
+  const allColumns = editMode && onDeleteRows
+    ? [selectColumn, ...columns]
+    : columns;
+
   const table = useReactTable({
     data,
-    columns,
+    columns: allColumns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
@@ -103,6 +158,8 @@ export function DataTable<TData, TValue>({
     onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
+    onRowSelectionChange: setRowSelection,
+    enableRowSelection: editMode,
     initialState: {
       pagination: {
         pageSize: Number(localStorage.getItem("brick-page-size")) || 50,
@@ -112,8 +169,13 @@ export function DataTable<TData, TValue>({
       sorting,
       columnFilters,
       columnVisibility,
+      rowSelection,
     },
   });
+
+  useEffect(() => {
+    if (!editMode) setRowSelection({});
+  }, [editMode]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -299,21 +361,48 @@ export function DataTable<TData, TValue>({
             )}
           </div>
 
-          {canEdit ? (
-            <Button
-              variant={editMode ? "default" : "secondary"}
-              size="sm"
-              className="h-7 px-3 text-xs gap-1 ml-1"
-              onClick={() => { setEditMode((m) => !m); setEditingCell(null); setEditError(""); }}
-            >
-              {editMode ? <Pencil className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
-              {editMode ? "Editing" : "Read-only"}
-            </Button>
-          ) : (
-            <Button variant="secondary" size="sm" className="h-7 px-3 text-xs gap-1 ml-1 !cursor-not-allowed" disabled>
-              <Lock className="h-3 w-3" />
-              Read-only
-            </Button>
+          {editMode && tableName && (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs gap-1.5"
+                onClick={async () => {
+                  try {
+                    const res = await fetch(`/api/tables/${tableName}`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: "{}",
+                    });
+                    if (res.ok) onRefresh?.();
+                  } catch {}
+                }}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add row
+              </Button>
+              {onDeleteRows && Object.keys(rowSelection).length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs gap-1.5 text-destructive hover:text-destructive"
+                  disabled={deleting}
+                  onClick={async () => {
+                    const selected = table.getSelectedRowModel().rows.map((r) => r.original);
+                    setDeleting(true);
+                    try {
+                      await onDeleteRows(selected);
+                      setRowSelection({});
+                    } finally {
+                      setDeleting(false);
+                    }
+                  }}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  {deleting ? "Deleting..." : `Delete (${Object.keys(rowSelection).length})`}
+                </Button>
+              )}
+            </>
           )}
         </div>
 
@@ -400,7 +489,7 @@ export function DataTable<TData, TValue>({
                   data-state={row.getIsSelected() && "selected"}
                 >
                   {row.getVisibleCells().map((cell) => {
-                    const isEditable = editMode && canEdit && cell.column.id !== pkColumn;
+                    const isEditable = editMode && canEdit && cell.column.id !== pkColumn && cell.column.id !== "_select";
                     return (
                       <TableCell
                         key={cell.id}
@@ -419,7 +508,7 @@ export function DataTable<TData, TValue>({
             ) : (
               <TableRow>
                 <TableCell
-                  colSpan={columns.length}
+                  colSpan={allColumns.length}
                   className="h-24 text-center"
                 >
                   No results.

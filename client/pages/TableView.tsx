@@ -50,11 +50,12 @@ interface TableData {
 interface LayoutContext {
   collapsed: boolean;
   setCollapsed: (v: boolean | ((prev: boolean) => boolean)) => void;
+  editMode: boolean;
 }
 
 export function TableView() {
   const { tableName } = useParams<{ tableName: string }>();
-  const { collapsed, setCollapsed } = useOutletContext<LayoutContext>();
+  const { collapsed, setCollapsed, editMode } = useOutletContext<LayoutContext>();
   const [schema, setSchema] = useState<SchemaColumn[]>([]);
   const [data, setData] = useState<TableData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -139,6 +140,20 @@ export function TableView() {
       tableName={tableName}
       pkColumn={pkColumn}
       schema={schema}
+      editMode={editMode}
+      onDeleteRows={
+        pkColumn
+          ? async (rows) => {
+              const ids = rows.map((r) => (r as Record<string, unknown>)[pkColumn!]);
+              await Promise.all(
+                ids.map((id) =>
+                  fetch(`/api/tables/${tableName}/${id}`, { method: "DELETE" })
+                )
+              );
+              fetchData(false);
+            }
+          : undefined
+      }
     />
   );
 }

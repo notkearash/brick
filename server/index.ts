@@ -64,6 +64,76 @@ app.get("/api/tables", (c) => {
   return c.json(tables.map((t) => t.name));
 });
 
+app.post("/api/tables", async (c) => {
+  const db = getDb();
+  if (!db) {
+    return c.json({ error: "No database configured" }, 400);
+  }
+
+  const body = await c.req.json();
+  const { name, columns: cols } = body;
+
+  if (!name || typeof name !== "string") {
+    return c.json({ error: "Table name is required" }, 400);
+  }
+
+  if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name)) {
+    return c.json({ error: "Table name must be alphanumeric (plus underscores)" }, 400);
+  }
+
+  if (name.startsWith("_brick_") || name.startsWith("sqlite_")) {
+    return c.json({ error: "Reserved table name" }, 400);
+  }
+
+  if (!Array.isArray(cols) || cols.length === 0) {
+    return c.json({ error: "At least one column is required" }, 400);
+  }
+
+  const colDefs = cols.map((col: { name: string; type: string; pk?: boolean }) => {
+    const colName = col.name;
+    const colType = col.type || "TEXT";
+    if (col.pk) {
+      return `'${colName}' ${colType} PRIMARY KEY AUTOINCREMENT`;
+    }
+    return `'${colName}' ${colType}`;
+  });
+
+  try {
+    db.query(`CREATE TABLE '${name}' (${colDefs.join(", ")})`).run();
+    return c.json({ success: true, name }, 201);
+  } catch (e) {
+    return c.json({ error: `Create table failed: ${e}` }, 400);
+  }
+});
+
+app.delete("/api/tables/:name", (c) => {
+  const db = getDb();
+  if (!db) {
+    return c.json({ error: "No database configured" }, 400);
+  }
+
+  const tableName = c.req.param("name");
+
+  if (tableName.startsWith("_brick_") || tableName.startsWith("sqlite_")) {
+    return c.json({ error: "Cannot delete system tables" }, 400);
+  }
+
+  const tableExists = db
+    .query("SELECT name FROM sqlite_master WHERE type='table' AND name = ?")
+    .get(tableName);
+
+  if (!tableExists) {
+    return c.json({ error: "Table not found" }, 404);
+  }
+
+  try {
+    db.query(`DROP TABLE '${tableName}'`).run();
+    return c.json({ success: true });
+  } catch (e) {
+    return c.json({ error: `Drop table failed: ${e}` }, 400);
+  }
+});
+
 app.get("/api/tables/:name/schema", (c) => {
   const db = getDb();
   if (!db) {
@@ -126,18 +196,23 @@ app.post("/api/tables/:name", async (c) => {
   }
 
   const tableName = c.req.param("name");
-  const body = await c.req.json();
+  const body = await c.req.json().catch(() => ({}));
 
   const columns = Object.keys(body);
   const values = Object.values(body) as import("bun:sqlite").SQLQueryBindings[];
-  const placeholders = columns.map(() => "?").join(", ");
 
   try {
-    const result = db
-      .query(
-        `INSERT INTO '${tableName}' (${columns.join(", ")}) VALUES (${placeholders})`,
-      )
-      .run(...values);
+    let result;
+    if (columns.length === 0) {
+      result = db.query(`INSERT INTO '${tableName}' DEFAULT VALUES`).run();
+    } else {
+      const placeholders = columns.map(() => "?").join(", ");
+      result = db
+        .query(
+          `INSERT INTO '${tableName}' (${columns.join(", ")}) VALUES (${placeholders})`,
+        )
+        .run(...values);
+    }
 
     return c.json({ success: true, id: result.lastInsertRowid }, 201);
   } catch (e) {

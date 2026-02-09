@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router";
-import { Table2, LayoutGrid, List, Folder, Copy, DatabaseZap, ToyBrick, Users, Ban, Settings } from "lucide-react";
+import { Table2, LayoutGrid, List, Folder, Copy, DatabaseZap, ToyBrick, Users, Ban, Settings, Lock, Pencil, Plus, Trash2 } from "lucide-react";
 import { useBrickStatus } from "@/lib/useBrickStatus";
 import { BrickUpDialog } from "@/components/BrickUpDialog";
+import { CreateTableDialog } from "@/components/CreateTableDialog";
+import { DeleteTableDialog } from "@/components/DeleteTableDialog";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
@@ -19,6 +21,7 @@ import {
 import {
   ContextMenu,
   ContextMenuContent,
+  ContextMenuItem,
   ContextMenuLabel,
   ContextMenuSeparator,
   ContextMenuTrigger,
@@ -33,7 +36,10 @@ export function Layout() {
   const [tables, setTables] = useState<string[]>([]);
   const [dbPath, setDbPath] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState(false);
+  const [editMode, setEditMode] = useState(false);
   const [showBrickDialog, setShowBrickDialog] = useState(false);
+  const [showCreateTable, setShowCreateTable] = useState(false);
+  const [deleteTable, setDeleteTable] = useState<string | null>(null);
   const [pingDismissed, setPingDismissed] = useState(false);
   const navigate = useNavigate();
   const { bricked, refresh: refreshBrickStatus } = useBrickStatus();
@@ -83,6 +89,12 @@ export function Layout() {
       if (e.key === "," && e.metaKey) {
         e.preventDefault();
         navigate("/settings");
+      }
+
+      if (e.key === "e" && e.metaKey && !e.shiftKey && !e.altKey) {
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+        e.preventDefault();
+        setEditMode((m) => !m);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -172,6 +184,8 @@ export function Layout() {
                 cyan: { active: "ring-cyan-400 text-cyan-400", inactive: "text-cyan-400" },
               }[color];
 
+              const hasContextMenu = bricked || editMode;
+
               const navLink = (
                 <NavLink
                   to={`/table/${table}`}
@@ -188,7 +202,7 @@ export function Layout() {
                   <IconComponent
                     className="h-4 w-4 shrink-0"
                     onClick={
-                      bricked && !collapsed
+                      hasContextMenu && !collapsed
                         ? (e: React.MouseEvent) => {
                             e.preventDefault();
                             e.stopPropagation();
@@ -210,7 +224,7 @@ export function Layout() {
                 </NavLink>
               );
 
-              if (!bricked) {
+              if (!hasContextMenu) {
                 return (
                   <Tooltip key={table} open={collapsed ? undefined : false}>
                     <TooltipTrigger asChild>
@@ -232,84 +246,133 @@ export function Layout() {
                     <TooltipContent side="right">{table}</TooltipContent>
                   </Tooltip>
                   <ContextMenuContent className="px-2 py-1.5 min-w-0">
-                    <ContextMenuLabel className="px-0 py-0 pb-1 text-xs text-center">
-                      Tag
-                    </ContextMenuLabel>
-                    <div className="flex gap-2 justify-center pb-1.5">
-                      {(["none", "orange", "purple", "cyan"] as const).map((c) => (
-                        <button
-                          key={c}
-                          className={cn(
-                            "h-7 w-7 flex items-center justify-center cursor-pointer transition-opacity",
-                            color === c ? "" : "opacity-40 hover:opacity-100",
-                          )}
-                          onClick={() =>
-                            setTablePref(table, { color: c as TableColor })
-                          }
-                        >
-                          {c === "none" ? (
-                            <Ban className={cn(
-                              "h-3.5 w-3.5 text-muted-foreground",
-                              color === c && "ring-2 ring-ring rounded-full",
-                            )} />
-                          ) : (
-                            <span
+                    {bricked && (
+                      <>
+                        <ContextMenuLabel className="px-0 py-0 pb-1 text-xs text-center">
+                          Tag
+                        </ContextMenuLabel>
+                        <div className="flex gap-2 justify-center pb-1.5">
+                          {(["none", "orange", "purple", "cyan"] as const).map((c) => (
+                            <button
+                              key={c}
                               className={cn(
-                                "h-3.5 w-3.5 rounded-full",
-                                c === "orange" && "bg-orange-400",
-                                c === "purple" && "bg-purple-400",
-                                c === "cyan" && "bg-cyan-400",
-                                color === c &&
-                                  "ring-2 ring-offset-2 ring-offset-popover ring-ring",
+                                "h-7 w-7 flex items-center justify-center cursor-pointer transition-opacity",
+                                color === c ? "" : "opacity-40 hover:opacity-100",
                               )}
-                            />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                    <ContextMenuSeparator className="mx-0" />
-                    <ContextMenuLabel className="px-0 py-0 pt-1.5 pb-1 text-xs text-center">
-                      Icon
-                    </ContextMenuLabel>
-                    <div className="flex gap-2 justify-center">
-                      {([
-                        { value: "table", Icon: Table2 },
-                        { value: "grid", Icon: LayoutGrid },
-                        { value: "list", Icon: List },
-                        { value: "people", Icon: Users },
-                      ] as const).map(({ value, Icon }) => (
-                        <button
-                          key={value}
-                          className={cn(
-                            "h-7 w-7 flex items-center justify-center rounded-full cursor-pointer transition-all",
-                            iconType === value
-                              ? cn(
-                                  "bg-muted",
-                                  color === "orange"
-                                    ? "text-orange-400"
-                                    : color === "purple"
-                                      ? "text-purple-400"
-                                      : color === "cyan"
-                                        ? "text-cyan-400"
-                                        : "text-foreground",
-                                )
-                              : "text-muted-foreground/40 hover:text-muted-foreground",
-                          )}
-                          onClick={() =>
-                            setTablePref(table, { icon: value as TableIcon })
-                          }
+                              onClick={() =>
+                                setTablePref(table, { color: c as TableColor })
+                              }
+                            >
+                              {c === "none" ? (
+                                <Ban className={cn(
+                                  "h-3.5 w-3.5 text-muted-foreground",
+                                  color === c && "ring-2 ring-ring rounded-full",
+                                )} />
+                              ) : (
+                                <span
+                                  className={cn(
+                                    "h-3.5 w-3.5 rounded-full",
+                                    c === "orange" && "bg-orange-400",
+                                    c === "purple" && "bg-purple-400",
+                                    c === "cyan" && "bg-cyan-400",
+                                    color === c &&
+                                      "ring-2 ring-offset-2 ring-offset-popover ring-ring",
+                                  )}
+                                />
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                        <ContextMenuSeparator className="mx-0" />
+                        <ContextMenuLabel className="px-0 py-0 pt-1.5 pb-1 text-xs text-center">
+                          Icon
+                        </ContextMenuLabel>
+                        <div className="flex gap-2 justify-center">
+                          {([
+                            { value: "table", Icon: Table2 },
+                            { value: "grid", Icon: LayoutGrid },
+                            { value: "list", Icon: List },
+                            { value: "people", Icon: Users },
+                          ] as const).map(({ value, Icon }) => (
+                            <button
+                              key={value}
+                              className={cn(
+                                "h-7 w-7 flex items-center justify-center rounded-full cursor-pointer transition-all",
+                                iconType === value
+                                  ? cn(
+                                      "bg-muted",
+                                      color === "orange"
+                                        ? "text-orange-400"
+                                        : color === "purple"
+                                          ? "text-purple-400"
+                                          : color === "cyan"
+                                            ? "text-cyan-400"
+                                            : "text-foreground",
+                                    )
+                                  : "text-muted-foreground/40 hover:text-muted-foreground",
+                              )}
+                              onClick={() =>
+                                setTablePref(table, { icon: value as TableIcon })
+                              }
+                            >
+                              <Icon className="h-4 w-4" />
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                    {editMode && (
+                      <>
+                        {bricked && <ContextMenuSeparator className="mx-0" />}
+                        <ContextMenuItem
+                          className="text-destructive focus:text-destructive gap-2"
+                          onClick={() => setDeleteTable(table)}
                         >
-                          <Icon className="h-4 w-4" />
-                        </button>
-                      ))}
-                    </div>
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Delete table
+                        </ContextMenuItem>
+                      </>
+                    )}
                   </ContextMenuContent>
                 </ContextMenu>
               );
             })}
           </TooltipProvider>
+          {editMode && (
+            <>
+              <div className="border-t border-dashed border-muted-foreground/30 -mx-2 my-3" />
+              <button
+                className={cn(
+                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors w-full cursor-pointer text-muted-foreground hover:text-foreground hover:ring-1 hover:ring-ring",
+                  collapsed && "justify-center px-0",
+                )}
+                onClick={() => setShowCreateTable(true)}
+              >
+                <Plus className="h-4 w-4 shrink-0" />
+                {!collapsed && "New table"}
+              </button>
+            </>
+          )}
         </nav>
-        <div className="border-t p-2">
+        <div className="border-t p-2 space-y-1">
+          <button
+            className={cn(
+              "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors w-full",
+              editMode
+                ? "text-primary"
+                : "text-muted-foreground opacity-60 hover:opacity-100",
+              collapsed && "justify-center px-0",
+            )}
+            onClick={() => setEditMode((m) => !m)}
+            title={editMode ? "Editing (⌘E)" : "Read-only (⌘E)"}
+          >
+            {editMode ? (
+              <Pencil className="h-4 w-4 shrink-0" />
+            ) : (
+              <Lock className="h-4 w-4 shrink-0" />
+            )}
+            {!collapsed && (editMode ? "Editing" : "Read-only")}
+          </button>
           <NavLink
             to="/settings"
             className={({ isActive }) =>
@@ -330,7 +393,7 @@ export function Layout() {
 
       <main className="flex-1 min-w-0 min-h-0 overflow-hidden">
         <Outlet
-          context={{ collapsed, setCollapsed, bricked, refreshBrickStatus }}
+          context={{ collapsed, setCollapsed, bricked, refreshBrickStatus, editMode, setEditMode, tables, refreshTables: loadDb }}
         />
       </main>
 
@@ -342,6 +405,29 @@ export function Layout() {
             setShowBrickDialog(false);
             refreshBrickStatus();
             loadDb();
+          }}
+        />
+      )}
+
+      {showCreateTable && (
+        <CreateTableDialog
+          onClose={() => setShowCreateTable(false)}
+          onCreated={(name) => {
+            setShowCreateTable(false);
+            loadDb();
+            navigate(`/table/${name}`);
+          }}
+        />
+      )}
+
+      {deleteTable && (
+        <DeleteTableDialog
+          tableName={deleteTable}
+          onClose={() => setDeleteTable(null)}
+          onDeleted={() => {
+            setDeleteTable(null);
+            loadDb();
+            navigate("/");
           }}
         />
       )}
