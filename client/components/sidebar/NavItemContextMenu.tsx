@@ -100,7 +100,7 @@ export function NavItemContextMenu({
         <>
           {bricked && <ContextMenuSeparator className="mx-0" />}
           <ContextMenuItem
-            className="text-destructive focus:text-destructive gap-2"
+            className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer gap-2"
             onClick={onDeleteTable}
           >
             <Trash2 className="h-3.5 w-3.5" />
