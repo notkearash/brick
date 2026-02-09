@@ -6,13 +6,11 @@ import {
   eachDayOfInterval,
   format,
   isSameMonth,
-  isSameDay,
   isToday,
-  parseISO,
 } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { CalendarEvent } from ".";
-import { getEventClasses } from ".";
+import { getEventClasses, getEventsForDay } from ".";
 
 interface MonthViewProps {
   currentDate: Date;
@@ -23,18 +21,6 @@ interface MonthViewProps {
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MAX_VISIBLE_EVENTS = 3;
-
-function getEventsForDay(events: CalendarEvent[], day: Date): CalendarEvent[] {
-  return events.filter((event) => {
-    const start = parseISO(event.start_at);
-    const end = event.end_at ? parseISO(event.end_at) : start;
-    const dayStart = new Date(day);
-    dayStart.setHours(0, 0, 0, 0);
-    const dayEnd = new Date(day);
-    dayEnd.setHours(23, 59, 59, 999);
-    return start <= dayEnd && end >= dayStart;
-  });
-}
 
 export function MonthView({
   currentDate,

@@ -6,26 +6,16 @@ import {
   startOfDay,
   setHours,
   isSameDay,
-  differenceInMinutes,
 } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { CalendarEvent } from ".";
-import { getEventClasses } from ".";
+import { getEventClasses, isAllDay, HOUR_HEIGHT } from ".";
 
 interface DayViewProps {
   currentDate: Date;
   events: CalendarEvent[];
   onTimeSlotClick?: (date: Date) => void;
   onEventClick?: (event: CalendarEvent) => void;
-}
-
-const HOUR_HEIGHT = 48;
-
-function isAllDay(event: CalendarEvent): boolean {
-  if (!event.end_at) return false;
-  const start = parseISO(event.start_at);
-  const end = parseISO(event.end_at);
-  return differenceInMinutes(end, start) >= 1440;
 }
 
 export function DayView({

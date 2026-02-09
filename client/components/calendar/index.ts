@@ -21,3 +21,24 @@ export const EVENT_COLOR_NAMES = Object.keys(EVENT_COLORS);
 export function getEventClasses(color: string | null): string {
   return EVENT_COLORS[color || "blue"] || EVENT_COLORS.blue;
 }
+
+export const HOUR_HEIGHT = 48;
+
+export function getEventsForDay(events: CalendarEvent[], day: Date): CalendarEvent[] {
+  return events.filter((event) => {
+    const start = new Date(event.start_at);
+    const end = event.end_at ? new Date(event.end_at) : start;
+    const dayStart = new Date(day);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(day);
+    dayEnd.setHours(23, 59, 59, 999);
+    return start <= dayEnd && end >= dayStart;
+  });
+}
+
+export function isAllDay(event: CalendarEvent): boolean {
+  if (!event.end_at) return false;
+  const start = new Date(event.start_at);
+  const end = new Date(event.end_at);
+  return (end.getTime() - start.getTime()) >= 1440 * 60000;
+}

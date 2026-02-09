@@ -7,39 +7,18 @@ import {
   isSameDay,
   isToday,
   parseISO,
-  differenceInMinutes,
   startOfDay,
   setHours,
 } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { CalendarEvent } from ".";
-import { getEventClasses } from ".";
+import { getEventClasses, getEventsForDay, isAllDay, HOUR_HEIGHT } from ".";
 
 interface WeekViewProps {
   currentDate: Date;
   events: CalendarEvent[];
   onTimeSlotClick?: (date: Date) => void;
   onEventClick?: (event: CalendarEvent) => void;
-}
-
-const HOUR_HEIGHT = 48; // px per hour
-
-function getEventsForDay(events: CalendarEvent[], day: Date): CalendarEvent[] {
-  return events.filter((event) => {
-    const start = parseISO(event.start_at);
-    const end = event.end_at ? parseISO(event.end_at) : start;
-    const dayStart = startOfDay(day);
-    const dayEnd = new Date(day);
-    dayEnd.setHours(23, 59, 59, 999);
-    return start <= dayEnd && end >= dayStart;
-  });
-}
-
-function isAllDay(event: CalendarEvent): boolean {
-  if (!event.end_at) return false;
-  const start = parseISO(event.start_at);
-  const end = parseISO(event.end_at);
-  return differenceInMinutes(end, start) >= 1440;
 }
 
 export function WeekView({
@@ -69,14 +48,7 @@ export function WeekView({
           <div className="grid grid-cols-[3rem_repeat(7,1fr)]">
             <div className="text-[10px] text-muted-foreground p-1">all-day</div>
             {days.map((day) => {
-              const dayAllDay = allDayEvents.filter((e) => {
-                const start = parseISO(e.start_at);
-                const end = e.end_at ? parseISO(e.end_at) : start;
-                const ds = startOfDay(day);
-                const de = new Date(day);
-                de.setHours(23, 59, 59, 999);
-                return start <= de && end >= ds;
-              });
+              const dayAllDay = getEventsForDay(allDayEvents, day);
               return (
                 <div
                   key={day.toISOString()}

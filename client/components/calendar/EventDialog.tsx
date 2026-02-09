@@ -139,7 +139,9 @@ export function EventDialog({
             />
           </div>
           <div>
-            <label className="text-sm text-muted-foreground">End (optional)</label>
+            <label className="text-sm text-muted-foreground">
+              End (optional)
+            </label>
             <Input
               type="datetime-local"
               value={endAt}
@@ -155,7 +157,7 @@ export function EventDialog({
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Optional description..."
-            className="mt-1 w-full min-h-[60px] bg-background border rounded-md px-3 py-2 text-sm resize-y focus:outline-none focus:ring-1 focus:ring-ring"
+            className="mt-1 w-full min-h-15 bg-background border rounded-md px-3 py-2 text-sm resize-y focus:outline-none focus:ring-1 focus:ring-ring"
           />
         </div>
 
@@ -200,7 +202,12 @@ export function EventDialog({
           )}
         </div>
         <div className="flex gap-2">
-          <Button variant="ghost" size="sm" onClick={onClose} disabled={loading}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            disabled={loading}
+          >
             Cancel
           </Button>
           <Button
