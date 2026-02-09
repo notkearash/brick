@@ -1,16 +1,19 @@
 import { useCallback, useEffect, useState } from "react";
 
 export type TableColor = "none" | "orange" | "purple" | "cyan";
-export type TableIcon = "table" | "grid" | "list" | "people";
+export type TableIcon = "table" | "grid" | "list" | "people" | "calendar" | "calendar-days" | "calendar-check" | "calendar-clock";
+
+export type ViewType = "table" | "calendar";
 
 export interface TablePref {
   color?: TableColor;
   icon?: TableIcon;
+  viewType?: ViewType;
 }
 
 type TablePrefs = Record<string, TablePref>;
 
-const DEFAULTS: Record<string, string> = { color: "none", icon: "table" };
+const DEFAULTS: Record<string, string> = { color: "none", icon: "table", view_type: "table" };
 
 export function useTablePrefs(bricked: boolean | null) {
   const [prefs, setPrefs] = useState<TablePrefs>({});
@@ -37,6 +40,11 @@ export function useTablePrefs(bricked: boolean | null) {
             continue;
           }
           if (!row.scope) continue;
+          if (row.key === "view_type") {
+            if (!map[row.scope]) map[row.scope] = {};
+            map[row.scope].viewType = row.value as ViewType;
+            continue;
+          }
           if (row.key !== "color" && row.key !== "icon") continue;
           if (!map[row.scope]) map[row.scope] = {};
           (map[row.scope] as any)[row.key] = row.value;
@@ -57,6 +65,7 @@ export function useTablePrefs(bricked: boolean | null) {
         const merged = { ...existing, ...update };
         if (merged.color === "none") delete merged.color;
         if (merged.icon === "table") delete merged.icon;
+        if (merged.viewType === "table") delete merged.viewType;
         const next = { ...prev };
         if (Object.keys(merged).length === 0) {
           delete next[table];
@@ -66,18 +75,20 @@ export function useTablePrefs(bricked: boolean | null) {
         return next;
       });
 
+      const KEY_MAP: Record<string, string> = { viewType: "view_type" };
       for (const [key, value] of Object.entries(update)) {
-        if (value === DEFAULTS[key]) {
+        const apiKey = KEY_MAP[key] || key;
+        if (value === DEFAULTS[apiKey]) {
           await fetch("/api/brick/preferences", {
             method: "DELETE",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ key, scope: table }),
+            body: JSON.stringify({ key: apiKey, scope: table }),
           });
         } else {
           await fetch("/api/brick/preferences", {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ key, scope: table, value }),
+            body: JSON.stringify({ key: apiKey, scope: table, value }),
           });
         }
       }

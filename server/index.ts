@@ -71,7 +71,7 @@ app.post("/api/tables", async (c) => {
   }
 
   const body = await c.req.json();
-  const { name, columns: cols } = body;
+  const { name, columns: cols, type } = body;
 
   if (!name || typeof name !== "string") {
     return c.json({ error: "Table name is required" }, 400);
@@ -83,6 +83,17 @@ app.post("/api/tables", async (c) => {
 
   if (name.startsWith("_brick_") || name.startsWith("sqlite_")) {
     return c.json({ error: "Reserved table name" }, 400);
+  }
+
+  if (type === "calendar") {
+    try {
+      db.query(
+        `CREATE TABLE '${name}' (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, start_at TEXT NOT NULL, end_at TEXT, description TEXT, color TEXT)`,
+      ).run();
+      return c.json({ success: true, name }, 201);
+    } catch (e) {
+      return c.json({ error: `Create table failed: ${e}` }, 400);
+    }
   }
 
   if (!Array.isArray(cols) || cols.length === 0) {
@@ -165,6 +176,8 @@ app.get("/api/tables/:name", (c) => {
   const tableName = c.req.param("name");
   const limit = parseInt(c.req.query("limit") || "100");
   const offset = parseInt(c.req.query("offset") || "0");
+  const startDate = c.req.query("start_date");
+  const endDate = c.req.query("end_date");
 
   const tableExists = db
     .query("SELECT name FROM sqlite_master WHERE type='table' AND name = ?")
@@ -174,12 +187,28 @@ app.get("/api/tables/:name", (c) => {
     return c.json({ error: "Table not found" }, 404);
   }
 
-  const rows = db
-    .query(`SELECT * FROM '${tableName}' LIMIT ? OFFSET ?`)
-    .all(limit, offset);
-  const countResult = db
-    .query(`SELECT COUNT(*) as count FROM '${tableName}'`)
-    .get() as { count: number };
+  let rows;
+  let countResult: { count: number };
+
+  if (startDate && endDate) {
+    rows = db
+      .query(
+        `SELECT * FROM '${tableName}' WHERE start_at < ? AND (end_at >= ? OR end_at IS NULL) LIMIT ? OFFSET ?`,
+      )
+      .all(endDate, startDate, limit, offset);
+    countResult = db
+      .query(
+        `SELECT COUNT(*) as count FROM '${tableName}' WHERE start_at < ? AND (end_at >= ? OR end_at IS NULL)`,
+      )
+      .get(endDate, startDate) as { count: number };
+  } else {
+    rows = db
+      .query(`SELECT * FROM '${tableName}' LIMIT ? OFFSET ?`)
+      .all(limit, offset);
+    countResult = db
+      .query(`SELECT COUNT(*) as count FROM '${tableName}'`)
+      .get() as { count: number };
+  }
 
   return c.json({
     rows,

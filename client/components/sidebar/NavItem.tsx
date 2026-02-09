@@ -10,7 +10,7 @@ import {
   ContextMenu,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import type { TablePref } from "@/hooks/useTablePrefs";
+import type { TablePref, ViewType } from "@/hooks/useTablePrefs";
 import { getTableIcon, COLOR_CLASSES } from ".";
 import { NavItemContextMenu } from "./NavItemContextMenu";
 
@@ -20,6 +20,7 @@ export interface NavItemProps {
   bricked: boolean | null;
   editMode: boolean;
   canReorder?: boolean;
+  viewType?: ViewType;
   pref: TablePref;
   onSetPref: (update: Partial<TablePref>) => void;
   onDeleteTable: () => void;
@@ -32,6 +33,7 @@ export function NavItem({
   collapsed,
   bricked,
   editMode,
+  viewType,
   pref,
   onSetPref,
   onDeleteTable,
@@ -44,10 +46,11 @@ export function NavItem({
   const colorClasses = COLOR_CLASSES[color];
   const hasContextMenu = bricked || editMode;
   const showGrip = !!dragHandleRef && !collapsed;
+  const linkBase = viewType === "calendar" ? "/calendar" : "/table";
 
   const navLink = (
     <NavLink
-      to={`/table/${table}`}
+      to={`${linkBase}/${table}`}
       className={({ isActive }) =>
         cn(
           "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
@@ -126,6 +129,7 @@ export function NavItem({
         editMode={editMode}
         color={color}
         iconType={iconType}
+        viewType={viewType}
         onSetPref={onSetPref}
         onDeleteTable={onDeleteTable}
       />

@@ -43,8 +43,6 @@ export function Layout() {
   const { bricked, refresh: refreshBrickStatus } = useBrickStatus();
   const { prefs: tablePrefs, setPref: setTablePref, tableOrder, setTableOrder } = useTablePrefs(bricked);
 
-  useKeyboardShortcuts({ tables, navigate, setCollapsed, setEditMode });
-
   const sortedTables = useMemo(() => {
     if (tableOrder.length === 0) return tables;
     const orderMap = new Map(tableOrder.map((t, i) => [t, i]));
@@ -54,6 +52,8 @@ export function Layout() {
       return ai - bi;
     });
   }, [tables, tableOrder]);
+
+  useKeyboardShortcuts({ tables: sortedTables, navigate, setCollapsed, setEditMode, tablePrefs });
 
   const canReorder = editMode && bricked === true;
 
@@ -114,6 +114,7 @@ export function Layout() {
                     bricked={bricked}
                     editMode={editMode}
                     canReorder={canReorder}
+                    viewType={tablePrefs[table]?.viewType}
                     pref={tablePrefs[table] || {}}
                     onSetPref={(update) => setTablePref(table, update)}
                     onDeleteTable={() => setDeleteTable(table)}
@@ -133,7 +134,7 @@ export function Layout() {
                 onClick={() => setShowCreateTable(true)}
               >
                 <Plus className="h-4 w-4 shrink-0" />
-                {!collapsed && "New table"}
+                {!collapsed && "New item"}
               </button>
             </>
           )}
@@ -175,11 +176,13 @@ export function Layout() {
 
       {showCreateTable && (
         <CreateTableDialog
+          bricked={bricked}
           onClose={() => setShowCreateTable(false)}
-          onCreated={(name) => {
+          onCreated={(name, viewType) => {
             setShowCreateTable(false);
             loadDb();
-            navigate(`/table/${name}`);
+            const base = viewType === "calendar" ? "/calendar" : "/table";
+            navigate(`${base}/${name}`);
           }}
         />
       )}

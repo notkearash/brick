@@ -7,12 +7,15 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Table2, Calendar } from "lucide-react";
 import { DialogShell } from ".";
+import type { ViewType } from "@/hooks/useTablePrefs";
+import { cn } from "@/lib/utils";
 
 interface CreateTableDialogProps {
   onClose: () => void;
-  onCreated: (name: string) => void;
+  onCreated: (name: string, viewType?: ViewType) => void;
+  bricked?: boolean | null;
 }
 
 interface ColumnDef {
@@ -20,9 +23,21 @@ interface ColumnDef {
   type: string;
 }
 
+type ItemType = "table" | "calendar";
+
 const TYPES = ["TEXT", "INTEGER", "REAL", "BLOB"];
 
-export function CreateTableDialog({ onClose, onCreated }: CreateTableDialogProps) {
+const CALENDAR_SCHEMA = [
+  "id INTEGER PRIMARY KEY AUTOINCREMENT",
+  "title TEXT NOT NULL",
+  "start_at TEXT NOT NULL",
+  "end_at TEXT",
+  "description TEXT",
+  "color TEXT",
+];
+
+export function CreateTableDialog({ onClose, onCreated, bricked }: CreateTableDialogProps) {
+  const [itemType, setItemType] = useState<ItemType | null>(bricked ? null : "table");
   const [name, setName] = useState("");
   const [autoId, setAutoId] = useState(true);
   const [cols, setCols] = useState<ColumnDef[]>([{ name: "", type: "TEXT" }]);
@@ -41,7 +56,7 @@ export function CreateTableDialog({ onClose, onCreated }: CreateTableDialogProps
     setCols((c) => c.map((col, i) => (i === index ? { ...col, [field]: value } : col)));
   }
 
-  async function handleSubmit() {
+  async function handleSubmitTable() {
     const trimmedName = name.trim();
     if (!trimmedName) return;
 
@@ -73,7 +88,7 @@ export function CreateTableDialog({ onClose, onCreated }: CreateTableDialogProps
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
-      onCreated(trimmedName);
+      onCreated(trimmedName, "table");
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -81,6 +96,142 @@ export function CreateTableDialog({ onClose, onCreated }: CreateTableDialogProps
     }
   }
 
+  async function handleSubmitCalendar() {
+    const trimmedName = name.trim();
+    if (!trimmedName) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/tables", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmedName, type: "calendar" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+
+      await fetch("/api/brick/preferences", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "view_type", scope: trimmedName, value: "calendar" }),
+      });
+      await fetch("/api/brick/preferences", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "icon", scope: trimmedName, value: "calendar" }),
+      });
+
+      onCreated(trimmedName, "calendar");
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Step 1: Type picker
+  if (itemType === null) {
+    return (
+      <DialogShell onClose={onClose} loading={loading}>
+        <CardHeader>
+          <CardTitle className="text-lg">New item</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <button
+            className={cn(
+              "w-full flex items-center gap-3 rounded-md border p-3 text-sm font-medium transition-colors",
+              "hover:ring-1 hover:ring-ring cursor-pointer text-left",
+            )}
+            onClick={() => setItemType("table")}
+          >
+            <Table2 className="h-5 w-5 shrink-0 text-muted-foreground" />
+            <div>
+              <div>Table</div>
+              <div className="text-xs text-muted-foreground font-normal">Custom columns, data grid view</div>
+            </div>
+          </button>
+          <button
+            className={cn(
+              "w-full flex items-center gap-3 rounded-md border p-3 text-sm font-medium transition-colors",
+              "hover:ring-1 hover:ring-ring cursor-pointer text-left",
+            )}
+            onClick={() => setItemType("calendar")}
+          >
+            <Calendar className="h-5 w-5 shrink-0 text-muted-foreground" />
+            <div>
+              <div>Calendar</div>
+              <div className="text-xs text-muted-foreground font-normal">Events with dates, month/week/day views</div>
+            </div>
+          </button>
+        </CardContent>
+        <CardFooter className="justify-end">
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            Cancel
+          </Button>
+        </CardFooter>
+      </DialogShell>
+    );
+  }
+
+  // Step 2b: Calendar form
+  if (itemType === "calendar") {
+    return (
+      <DialogShell onClose={onClose} loading={loading}>
+        <CardHeader>
+          <CardTitle className="text-lg">Create calendar</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <label className="text-sm text-muted-foreground">Calendar name</label>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="my_calendar"
+              className="mt-1"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSubmitCalendar();
+              }}
+            />
+          </div>
+          <div>
+            <label className="text-sm text-muted-foreground">Schema</label>
+            <div className="mt-1 rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground font-mono space-y-0.5">
+              {CALENDAR_SCHEMA.map((col) => (
+                <div key={col}>{col}</div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+        <CardFooter className="justify-between">
+          <div>
+            {error && <p className="text-sm text-destructive">{error}</p>}
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { setItemType(bricked ? null : "table"); setError(null); }}
+              disabled={loading}
+            >
+              {bricked ? "Back" : "Cancel"}
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleSubmitCalendar}
+              disabled={loading || !name.trim()}
+            >
+              {loading ? "Creating..." : "Create"}
+            </Button>
+          </div>
+        </CardFooter>
+      </DialogShell>
+    );
+  }
+
+  // Step 2a: Table form (existing)
   return (
     <DialogShell onClose={onClose} loading={loading}>
       <CardHeader>
@@ -96,7 +247,7 @@ export function CreateTableDialog({ onClose, onCreated }: CreateTableDialogProps
             className="mt-1"
             autoFocus
             onKeyDown={(e) => {
-              if (e.key === "Enter") handleSubmit();
+              if (e.key === "Enter") handleSubmitTable();
             }}
           />
         </div>
@@ -127,7 +278,7 @@ export function CreateTableDialog({ onClose, onCreated }: CreateTableDialogProps
                   placeholder="column_name"
                   className="flex-1 h-8 text-sm"
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") handleSubmit();
+                    if (e.key === "Enter") handleSubmitTable();
                   }}
                 />
                 <select
@@ -168,12 +319,17 @@ export function CreateTableDialog({ onClose, onCreated }: CreateTableDialogProps
           {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
         <div className="flex gap-2">
-          <Button variant="ghost" size="sm" onClick={onClose} disabled={loading}>
-            Cancel
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => { if (bricked) { setItemType(null); setError(null); } else { onClose(); } }}
+            disabled={loading}
+          >
+            {bricked ? "Back" : "Cancel"}
           </Button>
           <Button
             size="sm"
-            onClick={handleSubmit}
+            onClick={handleSubmitTable}
             disabled={loading || !name.trim()}
           >
             {loading ? "Creating..." : "Create"}

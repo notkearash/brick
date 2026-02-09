@@ -1,11 +1,13 @@
 import { useEffect } from "react";
 import { NavigateFunction } from "react-router";
+import type { TablePref } from "@/hooks/useTablePrefs";
 
 interface UseKeyboardShortcutsOptions {
   tables: string[];
   navigate: NavigateFunction;
   setCollapsed: (fn: (prev: boolean) => boolean) => void;
   setEditMode: (fn: (prev: boolean) => boolean) => void;
+  tablePrefs?: Record<string, TablePref>;
 }
 
 export function useKeyboardShortcuts({
@@ -13,6 +15,7 @@ export function useKeyboardShortcuts({
   navigate,
   setCollapsed,
   setEditMode,
+  tablePrefs,
 }: UseKeyboardShortcutsOptions) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -22,7 +25,9 @@ export function useKeyboardShortcuts({
         e.preventDefault();
         const index = parseInt(e.key) - 1;
         if (tables[index]) {
-          navigate(`/table/${tables[index]}`);
+          const vt = tablePrefs?.[tables[index]]?.viewType;
+          const base = vt === "calendar" ? "/calendar" : "/table";
+          navigate(`${base}/${tables[index]}`);
         }
       }
 
@@ -44,5 +49,5 @@ export function useKeyboardShortcuts({
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [tables, navigate, setCollapsed, setEditMode]);
+  }, [tables, navigate, setCollapsed, setEditMode, tablePrefs]);
 }
