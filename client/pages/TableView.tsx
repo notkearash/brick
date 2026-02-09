@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useOutletContext } from "react-router";
 import { ColumnDef, PaginationState } from "@tanstack/react-table";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -62,6 +62,10 @@ export function TableView() {
     pageIndex: 0,
     pageSize: Number(localStorage.getItem("brick-page-size")) || 50,
   });
+
+  useEffect(() => {
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+  }, [tableName]);
 
   const { data: schemaResult } = useQuery({
     queryKey: ["table-schema", tableName],
