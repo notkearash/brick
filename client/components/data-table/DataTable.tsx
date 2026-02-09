@@ -499,7 +499,7 @@ export function DataTable<TData, TValue>({
                     return (
                       <TableCell
                         key={cell.id}
-                        className={cn(isEditable && "cursor-pointer hover:outline hover:outline-1 hover:outline-dashed hover:outline-amber-500")}
+                        className={cn("select-text", isEditable && "cursor-pointer hover:outline hover:outline-1 hover:outline-dashed hover:outline-amber-500")}
                         onClick={isEditable ? (e) => handleCellClick(e, row.index, cell.column.id, row.original as Record<string, unknown>) : undefined}
                       >
                         {flexRender(

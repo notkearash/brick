@@ -130,5 +130,11 @@
     body {
         @apply bg-background text-foreground;
         font-family: "Geist Mono", monospace;
+        -webkit-user-select: none;
+        user-select: none;
+    }
+    img, a {
+        -webkit-user-drag: none;
+        user-drag: none;
     }
 }
