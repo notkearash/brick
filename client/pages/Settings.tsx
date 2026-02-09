@@ -1,4 +1,4 @@
-import { useTheme, type Theme } from "@/lib/useTheme";
+import { useTheme, type Theme } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 
 const options: { value: Theme; label: string; description: string }[] = [
