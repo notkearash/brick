@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -28,10 +28,28 @@ import {
   ListFilter,
   Columns3,
   Lock,
+  Pencil,
   ChevronLeft,
   ChevronRight,
   RefreshCw,
 } from "lucide-react";
+
+interface SchemaColumn {
+  cid: number;
+  name: string;
+  type: string;
+  notnull: number;
+  dflt_value: string | null;
+  pk: number;
+}
+
+interface EditingCell {
+  rowIndex: number;
+  columnId: string;
+  value: string;
+  pkValue: unknown;
+  rect: { top: number; left: number; width: number };
+}
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -42,6 +60,9 @@ interface DataTableProps<TData, TValue> {
   onToggleSidebar?: () => void;
   totalRows?: number;
   onRefresh?: () => void;
+  tableName?: string;
+  pkColumn?: string;
+  schema?: SchemaColumn[];
 }
 
 export function DataTable<TData, TValue>({
@@ -53,15 +74,24 @@ export function DataTable<TData, TValue>({
   onToggleSidebar,
   totalRows,
   onRefresh,
+  tableName,
+  pkColumn,
+  schema,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [filterOpen, setFilterOpen] = useState(false);
   const [columnsOpen, setColumnsOpen] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const [editError, setEditError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const filterRef = useRef<HTMLDivElement>(null);
   const columnsRef = useRef<HTMLDivElement>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
 
   const table = useReactTable({
     data,
@@ -96,6 +126,13 @@ export function DataTable<TData, TValue>({
       ) {
         setColumnsOpen(false);
       }
+      if (
+        editorRef.current &&
+        !editorRef.current.contains(e.target as Node)
+      ) {
+        setEditingCell(null);
+        setEditError("");
+      }
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
@@ -119,6 +156,54 @@ export function DataTable<TData, TValue>({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [table]);
+
+  const canEdit = !!(tableName && pkColumn);
+
+  const handleCellClick = useCallback(
+    (e: React.MouseEvent<HTMLTableCellElement>, rowIndex: number, columnId: string, row: Record<string, unknown>) => {
+      if (!editMode || !canEdit || !pkColumn || columnId === pkColumn) return;
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const cellValue = row[columnId];
+      setEditValue(cellValue === null ? "" : String(cellValue));
+      setEditError("");
+      setEditingCell({
+        rowIndex,
+        columnId,
+        value: cellValue === null ? "" : String(cellValue),
+        pkValue: row[pkColumn],
+        rect: { top: rect.bottom, left: rect.left, width: Math.max(rect.width, 240) },
+      });
+    },
+    [editMode, canEdit, pkColumn],
+  );
+
+  const handleSave = useCallback(
+    async (valueToSave: string | null) => {
+      if (!editingCell || !tableName || !pkColumn) return;
+      setSaving(true);
+      setEditError("");
+      try {
+        const res = await fetch(`/api/tables/${tableName}/${editingCell.pkValue}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ [editingCell.columnId]: valueToSave }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ error: "Save failed" }));
+          setEditError(err.error || "Save failed");
+          return;
+        }
+        setEditingCell(null);
+        setEditError("");
+        onRefresh?.();
+      } catch {
+        setEditError("Network error");
+      } finally {
+        setSaving(false);
+      }
+    },
+    [editingCell, tableName, pkColumn, onRefresh],
+  );
 
   const filterValue = searchKey
     ? ((table.getColumn(searchKey)?.getFilterValue() as string) ?? "")
@@ -214,10 +299,22 @@ export function DataTable<TData, TValue>({
             )}
           </div>
 
-          <Button variant="secondary" size="sm" className="h-7 px-3 text-xs gap-1 ml-1 !cursor-not-allowed" disabled>
-            <Lock className="h-3 w-3" />
-            Read-only
-          </Button>
+          {canEdit ? (
+            <Button
+              variant={editMode ? "default" : "secondary"}
+              size="sm"
+              className="h-7 px-3 text-xs gap-1 ml-1"
+              onClick={() => { setEditMode((m) => !m); setEditingCell(null); setEditError(""); }}
+            >
+              {editMode ? <Pencil className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
+              {editMode ? "Editing" : "Read-only"}
+            </Button>
+          ) : (
+            <Button variant="secondary" size="sm" className="h-7 px-3 text-xs gap-1 ml-1 !cursor-not-allowed" disabled>
+              <Lock className="h-3 w-3" />
+              Read-only
+            </Button>
+          )}
         </div>
 
         <div className="flex items-center gap-1">
@@ -302,14 +399,21 @@ export function DataTable<TData, TValue>({
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
                 >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
-                    </TableCell>
-                  ))}
+                  {row.getVisibleCells().map((cell) => {
+                    const isEditable = editMode && canEdit && cell.column.id !== pkColumn;
+                    return (
+                      <TableCell
+                        key={cell.id}
+                        className={cn(isEditable && "cursor-pointer hover:bg-accent/50")}
+                        onClick={isEditable ? (e) => handleCellClick(e, row.index, cell.column.id, row.original as Record<string, unknown>) : undefined}
+                      >
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext(),
+                        )}
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
               ))
             ) : (
@@ -325,6 +429,69 @@ export function DataTable<TData, TValue>({
           </TableBody>
         </Table>
       </div>
+
+      {editingCell && (
+        <div
+          ref={editorRef}
+          className="fixed bg-popover text-popover-foreground border rounded-md shadow-lg z-50 p-3"
+          style={{
+            top: editingCell.rect.top + 4,
+            left: editingCell.rect.left,
+            width: editingCell.rect.width,
+            minWidth: 240,
+          }}
+        >
+          <div className="text-xs font-medium text-muted-foreground mb-2">
+            {editingCell.columnId}
+          </div>
+          <textarea
+            className="w-full min-h-[60px] bg-background border rounded px-2 py-1.5 text-sm resize-y focus:outline-none focus:ring-1 focus:ring-ring"
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && e.metaKey) {
+                e.preventDefault();
+                handleSave(editValue);
+              } else if (e.key === "Escape") {
+                setEditingCell(null);
+                setEditError("");
+              }
+            }}
+            autoFocus
+          />
+          {editError && (
+            <p className="text-xs text-destructive mt-1">{editError}</p>
+          )}
+          <div className="flex items-center gap-1.5 mt-2">
+            <Button
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => handleSave(editValue)}
+              disabled={saving}
+            >
+              {saving ? "Saving..." : "Save"}
+              {!saving && <span className="ml-1 text-[10px] opacity-60">⌘↵</span>}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => { setEditingCell(null); setEditError(""); }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs text-muted-foreground ml-auto"
+              onClick={() => handleSave(null)}
+              disabled={saving}
+            >
+              Set NULL
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

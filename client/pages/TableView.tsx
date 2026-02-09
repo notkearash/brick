@@ -116,6 +116,8 @@ export function TableView() {
     cell: ({ getValue }) => <CellContent value={getValue()} />,
   }));
 
+  const pkColumn = schema.find((col) => col.pk === 1)?.name;
+
   const searchCol = schema.find(
     (col) =>
       col.name !== "id" &&
@@ -134,6 +136,9 @@ export function TableView() {
       onToggleSidebar={() => setCollapsed((c: boolean) => !c)}
       totalRows={data.total}
       onRefresh={() => fetchData(false)}
+      tableName={tableName}
+      pkColumn={pkColumn}
+      schema={schema}
     />
   );
 }
