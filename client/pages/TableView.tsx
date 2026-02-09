@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams, useOutletContext } from "react-router";
 import { ColumnDef } from "@tanstack/react-table";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { DataTable } from "@/components/data-table/DataTable";
 
 function CellContent({ value }: { value: unknown }) {
@@ -56,38 +57,27 @@ interface LayoutContext {
 export function TableView() {
   const { tableName } = useParams<{ tableName: string }>();
   const { collapsed, setCollapsed, editMode } = useOutletContext<LayoutContext>();
-  const [schema, setSchema] = useState<SchemaColumn[]>([]);
-  const [data, setData] = useState<TableData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const queryClient = useQueryClient();
 
-  const fetchData = useCallback((showLoading = true) => {
-    if (!tableName) return;
+  const { data: tableResult, isLoading, error } = useQuery({
+    queryKey: ["table", tableName],
+    queryFn: async () => {
+      const [schemaData, tableData] = await Promise.all([
+        fetch(`/api/tables/${tableName}/schema`).then((r) => r.json()),
+        fetch(`/api/tables/${tableName}`).then((r) => r.json()),
+      ]);
+      if (schemaData.error) throw new Error(schemaData.error);
+      return { schema: schemaData.columns as SchemaColumn[], data: tableData as TableData };
+    },
+    enabled: !!tableName,
+  });
 
-    if (showLoading) setLoading(true);
-    setError("");
+  const schema = tableResult?.schema ?? [];
+  const data = tableResult?.data ?? null;
 
-    Promise.all([
-      fetch(`/api/tables/${tableName}/schema`).then((r) => r.json()),
-      fetch(`/api/tables/${tableName}`).then((r) => r.json()),
-    ])
-      .then(([schemaData, tableData]) => {
-        if (schemaData.error) {
-          setError(schemaData.error);
-          return;
-        }
-        setSchema(schemaData.columns);
-        setData(tableData);
-      })
-      .catch(() => setError("Failed to load table"))
-      .finally(() => setLoading(false));
-  }, [tableName]);
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["table", tableName] });
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground">
         Loading...
@@ -98,7 +88,7 @@ export function TableView() {
   if (error) {
     return (
       <div className="flex items-center justify-center h-full text-destructive">
-        {error}
+        {error.message}
       </div>
     );
   }
@@ -136,7 +126,7 @@ export function TableView() {
       sidebarCollapsed={collapsed}
       onToggleSidebar={() => setCollapsed((c: boolean) => !c)}
       totalRows={data.total}
-      onRefresh={() => fetchData(false)}
+      onRefresh={invalidate}
       tableName={tableName}
       pkColumn={pkColumn}
       schema={schema}
@@ -150,7 +140,7 @@ export function TableView() {
                   fetch(`/api/tables/${tableName}/${id}`, { method: "DELETE" })
                 )
               );
-              fetchData(false);
+              invalidate();
             }
           : undefined
       }

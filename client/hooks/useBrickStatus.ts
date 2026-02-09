@@ -1,20 +1,19 @@
-import { useCallback, useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 export function useBrickStatus() {
-  const [bricked, setBricked] = useState<boolean | null>(null);
+  const queryClient = useQueryClient();
 
-  const refresh = useCallback(() => {
-    fetch("/api/brick/status")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.bricked !== undefined) setBricked(data.bricked);
-      })
-      .catch(() => setBricked(null));
-  }, []);
+  const { data } = useQuery({
+    queryKey: ["brick-status"],
+    queryFn: () =>
+      fetch("/api/brick/status")
+        .then((r) => r.json())
+        .then((d) => d.bricked as boolean)
+        .catch(() => null),
+  });
 
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  const refresh = () =>
+    queryClient.invalidateQueries({ queryKey: ["brick-status"] });
 
-  return { bricked, refresh };
+  return { bricked: data ?? null, refresh };
 }
