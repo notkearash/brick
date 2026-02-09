@@ -1,4 +1,5 @@
 import { NavLink } from "react-router";
+import { GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
@@ -13,14 +14,17 @@ import type { TablePref } from "@/hooks/useTablePrefs";
 import { getTableIcon, COLOR_CLASSES } from ".";
 import { NavItemContextMenu } from "./NavItemContextMenu";
 
-interface NavItemProps {
+export interface NavItemProps {
   table: string;
   collapsed: boolean;
   bricked: boolean | null;
   editMode: boolean;
+  canReorder?: boolean;
   pref: TablePref;
   onSetPref: (update: Partial<TablePref>) => void;
   onDeleteTable: () => void;
+  dragHandleRef?: (element: HTMLElement | null) => void;
+  dragHandleListeners?: Record<string, any>;
 }
 
 export function NavItem({
@@ -31,12 +35,15 @@ export function NavItem({
   pref,
   onSetPref,
   onDeleteTable,
+  dragHandleRef,
+  dragHandleListeners,
 }: NavItemProps) {
   const color = pref.color || "none";
   const iconType = pref.icon || "table";
   const IconComponent = getTableIcon(iconType);
   const colorClasses = COLOR_CLASSES[color];
   const hasContextMenu = bricked || editMode;
+  const showGrip = !!dragHandleRef && !collapsed;
 
   const navLink = (
     <NavLink
@@ -48,6 +55,7 @@ export function NavItem({
             ? cn("ring-1", colorClasses.active)
             : cn("hover:ring-1 hover:ring-ring", colorClasses.inactive),
           collapsed && "justify-center px-0",
+          showGrip && "pr-8",
         )
       }
     >
@@ -76,11 +84,24 @@ export function NavItem({
     </NavLink>
   );
 
+  const gripHandle = showGrip ? (
+    <div
+      ref={dragHandleRef}
+      className="absolute right-1 top-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+      {...dragHandleListeners}
+    >
+      <GripVertical className="h-3.5 w-3.5" />
+    </div>
+  ) : null;
+
   if (!hasContextMenu) {
     return (
       <Tooltip open={collapsed ? undefined : false}>
         <TooltipTrigger asChild>
-          <div data-ctx>{navLink}</div>
+          <div data-ctx className="relative">
+            {navLink}
+            {gripHandle}
+          </div>
         </TooltipTrigger>
         <TooltipContent side="right">{table}</TooltipContent>
       </Tooltip>
@@ -92,7 +113,10 @@ export function NavItem({
       <Tooltip open={collapsed ? undefined : false}>
         <ContextMenuTrigger asChild>
           <TooltipTrigger asChild>
-            <div data-ctx>{navLink}</div>
+            <div data-ctx className="relative">
+              {navLink}
+              {gripHandle}
+            </div>
           </TooltipTrigger>
         </ContextMenuTrigger>
         <TooltipContent side="right">{table}</TooltipContent>

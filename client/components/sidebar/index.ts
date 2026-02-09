@@ -51,3 +51,4 @@ export const ICON_OPTIONS = [
 export { SidebarHeader } from "./SidebarHeader";
 export { SidebarFooter } from "./SidebarFooter";
 export { NavItem } from "./NavItem";
+export { SortableNavItem } from "./SortableNavItem";

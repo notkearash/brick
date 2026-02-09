@@ -14,10 +14,12 @@ const DEFAULTS: Record<string, string> = { color: "none", icon: "table" };
 
 export function useTablePrefs(bricked: boolean | null) {
   const [prefs, setPrefs] = useState<TablePrefs>({});
+  const [tableOrder, setTableOrderState] = useState<string[]>([]);
 
   const load = useCallback(() => {
     if (bricked !== true) {
       setPrefs({});
+      setTableOrderState([]);
       return;
     }
     fetch("/api/brick/preferences")
@@ -30,6 +32,10 @@ export function useTablePrefs(bricked: boolean | null) {
           scope: string;
           value: string;
         }[]) {
+          if (row.key === "table_order" && !row.scope) {
+            try { setTableOrderState(JSON.parse(row.value)); } catch {}
+            continue;
+          }
           if (!row.scope) continue;
           if (row.key !== "color" && row.key !== "icon") continue;
           if (!map[row.scope]) map[row.scope] = {};
@@ -37,7 +43,7 @@ export function useTablePrefs(bricked: boolean | null) {
         }
         setPrefs(map);
       })
-      .catch(() => setPrefs({}));
+      .catch(() => { setPrefs({}); });
   }, [bricked]);
 
   useEffect(() => {
@@ -79,5 +85,17 @@ export function useTablePrefs(bricked: boolean | null) {
     [],
   );
 
-  return { prefs, setPref };
+  const setTableOrder = useCallback(
+    (order: string[]) => {
+      setTableOrderState(order);
+      fetch("/api/brick/preferences", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "table_order", value: JSON.stringify(order) }),
+      });
+    },
+    [],
+  );
+
+  return { prefs, setPref, tableOrder, setTableOrder };
 }

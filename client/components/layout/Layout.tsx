@@ -1,6 +1,21 @@
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Outlet } from "react-router";
 import { Plus } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  sortableKeyboardCoordinates,
+  arrayMove,
+} from "@dnd-kit/sortable";
 import { cn } from "@/lib/utils";
 import { useBrickStatus } from "@/hooks/useBrickStatus";
 import { useDatabase } from "@/hooks/useDatabase";
@@ -13,7 +28,7 @@ import { DeleteTableDialog } from "@/components/dialogs/DeleteTableDialog";
 import {
   SidebarHeader,
   SidebarFooter,
-  NavItem,
+  SortableNavItem,
 } from "@/components/sidebar";
 
 export function Layout() {
@@ -26,9 +41,38 @@ export function Layout() {
 
   const { tables, dbPath, loadDb, navigate } = useDatabase();
   const { bricked, refresh: refreshBrickStatus } = useBrickStatus();
-  const { prefs: tablePrefs, setPref: setTablePref } = useTablePrefs(bricked);
+  const { prefs: tablePrefs, setPref: setTablePref, tableOrder, setTableOrder } = useTablePrefs(bricked);
 
   useKeyboardShortcuts({ tables, navigate, setCollapsed, setEditMode });
+
+  const sortedTables = useMemo(() => {
+    if (tableOrder.length === 0) return tables;
+    const orderMap = new Map(tableOrder.map((t, i) => [t, i]));
+    return [...tables].sort((a, b) => {
+      const ai = orderMap.get(a) ?? Infinity;
+      const bi = orderMap.get(b) ?? Infinity;
+      return ai - bi;
+    });
+  }, [tables, tableOrder]);
+
+  const canReorder = editMode && bricked === true;
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+      const oldIndex = sortedTables.indexOf(active.id as string);
+      const newIndex = sortedTables.indexOf(over.id as string);
+      if (oldIndex === -1 || newIndex === -1) return;
+      setTableOrder(arrayMove(sortedTables, oldIndex, newIndex));
+    },
+    [sortedTables, setTableOrder],
+  );
 
   const showPing = bricked === false && !pingDismissed;
 
@@ -52,20 +96,32 @@ export function Layout() {
         )}
 
         <nav className="flex-1 overflow-auto p-2 space-y-1">
-          <TooltipProvider delayDuration={300}>
-            {tables.map((table) => (
-              <NavItem
-                key={table}
-                table={table}
-                collapsed={collapsed}
-                bricked={bricked}
-                editMode={editMode}
-                pref={tablePrefs[table] || {}}
-                onSetPref={(update) => setTablePref(table, update)}
-                onDeleteTable={() => setDeleteTable(table)}
-              />
-            ))}
-          </TooltipProvider>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={sortedTables}
+              strategy={verticalListSortingStrategy}
+            >
+              <TooltipProvider delayDuration={300}>
+                {sortedTables.map((table) => (
+                  <SortableNavItem
+                    key={table}
+                    table={table}
+                    collapsed={collapsed}
+                    bricked={bricked}
+                    editMode={editMode}
+                    canReorder={canReorder}
+                    pref={tablePrefs[table] || {}}
+                    onSetPref={(update) => setTablePref(table, update)}
+                    onDeleteTable={() => setDeleteTable(table)}
+                  />
+                ))}
+              </TooltipProvider>
+            </SortableContext>
+          </DndContext>
           {editMode && (
             <>
               <div className="border-t border-dashed border-muted-foreground/30 -mx-2 my-3" />
