@@ -1,10 +1,25 @@
 import { useCallback, useEffect, useState } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router";
-import { Table2, LayoutGrid, List, Folder, Copy, DatabaseZap, ToyBrick, Users, Ban, Settings, Lock, Pencil, Plus, Trash2 } from "lucide-react";
+import {
+  Table2,
+  LayoutGrid,
+  List,
+  Folder,
+  Copy,
+  DatabaseZap,
+  ToyBrick,
+  Users,
+  Ban,
+  Settings,
+  Lock,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { useBrickStatus } from "@/lib/useBrickStatus";
-import { BrickUpDialog } from "@/components/BrickUpDialog";
-import { CreateTableDialog } from "@/components/CreateTableDialog";
-import { DeleteTableDialog } from "@/components/DeleteTableDialog";
+import { BrickUpDialog } from "@/components/dialogs/BrickUpDialog";
+import { CreateTableDialog } from "@/components/dialogs/CreateTableDialog";
+import { DeleteTableDialog } from "@/components/dialogs/DeleteTableDialog";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
@@ -111,7 +126,11 @@ export function Layout() {
       >
         {!collapsed && (
           <div className="border-b h-10 shrink-0">
-            <DropdownMenu onOpenChange={(open) => { if (open && showPing) setPingDismissed(true); }}>
+            <DropdownMenu
+              onOpenChange={(open) => {
+                if (open && showPing) setPingDismissed(true);
+              }}
+            >
               <DropdownMenuTrigger asChild>
                 <button
                   className="group flex items-center justify-between w-full h-full cursor-pointer px-3 focus:outline-none"
@@ -175,13 +194,32 @@ export function Layout() {
               const pref = tablePrefs[table] || {};
               const color = pref.color || "none";
               const iconType = pref.icon || "table";
-              const IconComponent = iconType === "people" ? Users : iconType === "grid" ? LayoutGrid : iconType === "list" ? List : Table2;
+              const IconComponent =
+                iconType === "people"
+                  ? Users
+                  : iconType === "grid"
+                    ? LayoutGrid
+                    : iconType === "list"
+                      ? List
+                      : Table2;
 
               const colorClasses = {
-                none: { active: "ring-primary text-primary", inactive: "text-muted-foreground" },
-                orange: { active: "ring-orange-400 text-orange-400", inactive: "text-orange-400" },
-                purple: { active: "ring-purple-400 text-purple-400", inactive: "text-purple-400" },
-                cyan: { active: "ring-cyan-400 text-cyan-400", inactive: "text-cyan-400" },
+                none: {
+                  active: "ring-primary text-primary",
+                  inactive: "text-muted-foreground",
+                },
+                orange: {
+                  active: "ring-orange-400 text-orange-400",
+                  inactive: "text-orange-400",
+                },
+                purple: {
+                  active: "ring-purple-400 text-purple-400",
+                  inactive: "text-purple-400",
+                },
+                cyan: {
+                  active: "ring-cyan-400 text-cyan-400",
+                  inactive: "text-cyan-400",
+                },
               }[color];
 
               const hasContextMenu = bricked || editMode;
@@ -194,7 +232,10 @@ export function Layout() {
                       "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                       isActive
                         ? cn("ring-1", colorClasses.active)
-                        : cn("hover:ring-1 hover:ring-ring", colorClasses.inactive),
+                        : cn(
+                            "hover:ring-1 hover:ring-ring",
+                            colorClasses.inactive,
+                          ),
                       collapsed && "justify-center px-0",
                     )
                   }
@@ -252,48 +293,59 @@ export function Layout() {
                           Tag
                         </ContextMenuLabel>
                         <div className="flex gap-2 justify-center pb-1.5">
-                          {(["none", "orange", "purple", "cyan"] as const).map((c) => (
-                            <button
-                              key={c}
-                              className={cn(
-                                "h-7 w-7 flex items-center justify-center cursor-pointer transition-opacity",
-                                color === c ? "" : "opacity-40 hover:opacity-100",
-                              )}
-                              onClick={() =>
-                                setTablePref(table, { color: c as TableColor })
-                              }
-                            >
-                              {c === "none" ? (
-                                <Ban className={cn(
-                                  "h-3.5 w-3.5 text-muted-foreground",
-                                  color === c && "ring-2 ring-ring rounded-full",
-                                )} />
-                              ) : (
-                                <span
-                                  className={cn(
-                                    "h-3.5 w-3.5 rounded-full",
-                                    c === "orange" && "bg-orange-400",
-                                    c === "purple" && "bg-purple-400",
-                                    c === "cyan" && "bg-cyan-400",
-                                    color === c &&
-                                      "ring-2 ring-offset-2 ring-offset-popover ring-ring",
-                                  )}
-                                />
-                              )}
-                            </button>
-                          ))}
+                          {(["none", "orange", "purple", "cyan"] as const).map(
+                            (c) => (
+                              <button
+                                key={c}
+                                className={cn(
+                                  "h-7 w-7 flex items-center justify-center cursor-pointer transition-opacity",
+                                  color === c
+                                    ? ""
+                                    : "opacity-40 hover:opacity-100",
+                                )}
+                                onClick={() =>
+                                  setTablePref(table, {
+                                    color: c as TableColor,
+                                  })
+                                }
+                              >
+                                {c === "none" ? (
+                                  <Ban
+                                    className={cn(
+                                      "h-3.5 w-3.5 text-muted-foreground",
+                                      color === c &&
+                                        "ring-2 ring-ring rounded-full",
+                                    )}
+                                  />
+                                ) : (
+                                  <span
+                                    className={cn(
+                                      "h-3.5 w-3.5 rounded-full",
+                                      c === "orange" && "bg-orange-400",
+                                      c === "purple" && "bg-purple-400",
+                                      c === "cyan" && "bg-cyan-400",
+                                      color === c &&
+                                        "ring-2 ring-offset-2 ring-offset-popover ring-ring",
+                                    )}
+                                  />
+                                )}
+                              </button>
+                            ),
+                          )}
                         </div>
                         <ContextMenuSeparator className="mx-0" />
                         <ContextMenuLabel className="px-0 py-0 pt-1.5 pb-1 text-xs text-center">
                           Icon
                         </ContextMenuLabel>
                         <div className="flex gap-2 justify-center">
-                          {([
-                            { value: "table", Icon: Table2 },
-                            { value: "grid", Icon: LayoutGrid },
-                            { value: "list", Icon: List },
-                            { value: "people", Icon: Users },
-                          ] as const).map(({ value, Icon }) => (
+                          {(
+                            [
+                              { value: "table", Icon: Table2 },
+                              { value: "grid", Icon: LayoutGrid },
+                              { value: "list", Icon: List },
+                              { value: "people", Icon: Users },
+                            ] as const
+                          ).map(({ value, Icon }) => (
                             <button
                               key={value}
                               className={cn(
@@ -312,7 +364,9 @@ export function Layout() {
                                   : "text-muted-foreground/40 hover:text-muted-foreground",
                               )}
                               onClick={() =>
-                                setTablePref(table, { icon: value as TableIcon })
+                                setTablePref(table, {
+                                  icon: value as TableIcon,
+                                })
                               }
                             >
                               <Icon className="h-4 w-4" />
@@ -393,7 +447,16 @@ export function Layout() {
 
       <main className="flex-1 min-w-0 min-h-0 overflow-hidden">
         <Outlet
-          context={{ collapsed, setCollapsed, bricked, refreshBrickStatus, editMode, setEditMode, tables, refreshTables: loadDb }}
+          context={{
+            collapsed,
+            setCollapsed,
+            bricked,
+            refreshBrickStatus,
+            editMode,
+            setEditMode,
+            tables,
+            refreshTables: loadDb,
+          }}
         />
       </main>
 
