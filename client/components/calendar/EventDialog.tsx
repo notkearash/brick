@@ -1,4 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { format } from "date-fns";
+import { Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   CardContent,
@@ -7,6 +9,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { DialogShell } from "@/components/dialogs";
 import { cn } from "@/lib/utils";
 import type { CalendarEvent } from ".";
@@ -20,10 +28,15 @@ interface EventDialogProps {
   onSaved: () => void;
 }
 
-function toLocalDatetime(d: Date): string {
-  const offset = d.getTimezoneOffset();
-  const local = new Date(d.getTime() - offset * 60000);
-  return local.toISOString().slice(0, 16);
+function toTimeString(d: Date): string {
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+function combineDateAndTime(date: Date, time: string): Date {
+  const [h, m] = time.split(":").map(Number);
+  const result = new Date(date);
+  result.setHours(h, m, 0, 0);
+  return result;
 }
 
 export function EventDialog({
@@ -36,13 +49,22 @@ export function EventDialog({
   const isEdit = !!event;
 
   const [title, setTitle] = useState(event?.title ?? "");
-  const [startAt, setStartAt] = useState(() => {
-    if (event?.start_at) return event.start_at.slice(0, 16);
-    if (defaultDate) return toLocalDatetime(defaultDate);
-    return toLocalDatetime(new Date());
+  const [startDate, setStartDate] = useState<Date | undefined>(() => {
+    if (event?.start_at) return new Date(event.start_at);
+    if (defaultDate) return defaultDate;
+    return new Date();
   });
-  const [endAt, setEndAt] = useState(() => {
-    if (event?.end_at) return event.end_at.slice(0, 16);
+  const [startTime, setStartTime] = useState(() => {
+    if (event?.start_at) return toTimeString(new Date(event.start_at));
+    if (defaultDate) return toTimeString(defaultDate);
+    return toTimeString(new Date());
+  });
+  const [endDate, setEndDate] = useState<Date | undefined>(() => {
+    if (event?.end_at) return new Date(event.end_at);
+    return undefined;
+  });
+  const [endTime, setEndTime] = useState(() => {
+    if (event?.end_at) return toTimeString(new Date(event.end_at));
     return "";
   });
   const [description, setDescription] = useState(event?.description ?? "");
@@ -51,15 +73,18 @@ export function EventDialog({
   const [error, setError] = useState<string | null>(null);
 
   async function handleSave() {
-    if (!title.trim() || !startAt) return;
+    if (!title.trim() || !startDate) return;
 
     setLoading(true);
     setError(null);
 
     const body: Record<string, string | null> = {
       title: title.trim(),
-      start_at: new Date(startAt).toISOString(),
-      end_at: endAt ? new Date(endAt).toISOString() : null,
+      start_at: combineDateAndTime(startDate, startTime).toISOString(),
+      end_at:
+        endDate && endTime
+          ? combineDateAndTime(endDate, endTime).toISOString()
+          : null,
       description: description.trim() || null,
       color,
     };
@@ -128,26 +153,68 @@ export function EventDialog({
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-3">
           <div>
             <label className="text-sm text-muted-foreground">Start</label>
-            <Input
-              type="datetime-local"
-              value={startAt}
-              onChange={(e) => setStartAt(e.target.value)}
-              className="mt-1"
-            />
+            <div className="flex gap-2 mt-1">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    data-empty={!startDate}
+                    className="data-[empty=true]:text-muted-foreground flex-1 justify-start text-left font-normal gap-2"
+                  >
+                    <CalendarIcon className="size-4" />
+                    {startDate ? format(startDate, "PPP") : "Pick a date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={setStartDate}
+                  />
+                </PopoverContent>
+              </Popover>
+              <Input
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                className="w-28"
+              />
+            </div>
           </div>
           <div>
             <label className="text-sm text-muted-foreground">
               End (optional)
             </label>
-            <Input
-              type="datetime-local"
-              value={endAt}
-              onChange={(e) => setEndAt(e.target.value)}
-              className="mt-1"
-            />
+            <div className="flex gap-2 mt-1">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    data-empty={!endDate}
+                    className="data-[empty=true]:text-muted-foreground flex-1 justify-start text-left font-normal gap-2"
+                  >
+                    <CalendarIcon className="size-4" />
+                    {endDate ? format(endDate, "PPP") : "Pick a date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={setEndDate}
+                  />
+                </PopoverContent>
+              </Popover>
+              <Input
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                className="w-28"
+              />
+            </div>
           </div>
         </div>
 
@@ -213,7 +280,7 @@ export function EventDialog({
           <Button
             size="sm"
             onClick={handleSave}
-            disabled={loading || !title.trim() || !startAt}
+            disabled={loading || !title.trim() || !startDate}
           >
             {loading ? "Saving..." : isEdit ? "Save" : "Create"}
           </Button>
