@@ -71,6 +71,7 @@ export function EventDialog({
   const [color, setColor] = useState(event?.color ?? "blue");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   async function handleSave() {
     if (!title.trim() || !startDate) return;
@@ -110,7 +111,10 @@ export function EventDialog({
 
   async function handleDelete() {
     if (!event) return;
-    if (!confirm("Delete this event?")) return;
+    if (!confirmingDelete) {
+      setConfirmingDelete(true);
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -256,7 +260,28 @@ export function EventDialog({
       <CardFooter className="justify-between">
         <div className="flex items-center gap-2">
           {error && <p className="text-sm text-destructive">{error}</p>}
-          {isEdit && (
+          {isEdit && (confirmingDelete ? (
+            <div className="flex items-center gap-1">
+              <span className="text-sm text-muted-foreground">Delete?</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive"
+                onClick={handleDelete}
+                disabled={loading}
+              >
+                Yes
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setConfirmingDelete(false)}
+                disabled={loading}
+              >
+                No
+              </Button>
+            </div>
+          ) : (
             <Button
               variant="ghost"
               size="sm"
@@ -266,7 +291,7 @@ export function EventDialog({
             >
               Delete
             </Button>
-          )}
+          ))}
         </div>
         <div className="flex gap-2">
           <Button
