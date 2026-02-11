@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,6 +40,7 @@ export function Setup() {
   const [loading, setLoading] = useState(false);
   const [recents, setRecents] = useState(getRecents);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const openDb = async (path: string) => {
     setError("");
@@ -59,6 +61,7 @@ export function Setup() {
       }
 
       addRecent(path);
+      queryClient.invalidateQueries();
       navigate("/");
     } catch {
       setError("Failed to open database");
