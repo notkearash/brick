@@ -3,6 +3,7 @@ import { useParams, useOutletContext } from "react-router";
 import { ColumnDef, PaginationState } from "@tanstack/react-table";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { DataTable } from "@/components/data-table/DataTable";
+import type { FilterCondition } from "@shared/filters";
 
 function CellContent({ value }: { value: unknown }) {
   const [expanded, setExpanded] = useState(false);
@@ -62,10 +63,16 @@ export function TableView() {
     pageIndex: 0,
     pageSize: Number(localStorage.getItem("brick-page-size")) || 50,
   });
+  const [filters, setFilters] = useState<FilterCondition[]>([]);
 
   useEffect(() => {
     setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+    setFilters([]);
   }, [tableName]);
+
+  useEffect(() => {
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+  }, [filters]);
 
   const { data: schemaResult } = useQuery({
     queryKey: ["table-schema", tableName],
@@ -78,12 +85,15 @@ export function TableView() {
   });
 
   const { data: tableResult, isLoading, error } = useQuery({
-    queryKey: ["table", tableName, pagination.pageIndex, pagination.pageSize],
+    queryKey: ["table", tableName, pagination.pageIndex, pagination.pageSize, JSON.stringify(filters)],
     queryFn: async () => {
       const params = new URLSearchParams({
         limit: String(pagination.pageSize),
         offset: String(pagination.pageIndex * pagination.pageSize),
       });
+      if (filters.length > 0) {
+        params.set("filters", JSON.stringify(filters));
+      }
       return fetch(`/api/tables/${tableName}?${params}`).then((r) => r.json()) as Promise<TableData>;
     },
     enabled: !!tableName,
@@ -127,20 +137,12 @@ export function TableView() {
 
   const pkColumn = schema.find((col) => col.pk === 1)?.name;
 
-  const searchCol = schema.find(
-    (col) =>
-      col.name !== "id" &&
-      (col.type.includes("TEXT") || col.type.includes("VARCHAR")),
-  );
-
   return (
     <DataTable
       columns={columns}
       data={data.rows}
-      searchKey={searchCol?.name}
-      searchPlaceholder={
-        searchCol ? `Search by ${searchCol.name}...` : undefined
-      }
+      filters={filters}
+      onFiltersChange={setFilters}
       sidebarCollapsed={collapsed}
       onToggleSidebar={() => setCollapsed((c: boolean) => !c)}
       totalRows={data.total}
