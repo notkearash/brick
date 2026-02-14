@@ -14,9 +14,10 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./client/*"]
+      "@/*": ["./client/*"],
+      "@shared/*": ["./shared/*"]
     }
   },
-  "include": ["server/**/*", "client/**/*"],
+  "include": ["server/**/*", "client/**/*", "shared/**/*"],
   "exclude": ["node_modules"]
 }
