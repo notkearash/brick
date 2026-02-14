@@ -11,6 +11,58 @@ import {
   brickUp,
   copyAndBrick,
 } from "./db";
+import type { FilterCondition } from "../shared/filters";
+
+const VALID_OPS = new Set([
+  "=",
+  "<>",
+  ">",
+  ">=",
+  "<",
+  "<=",
+  "like",
+  "not_like",
+  "in",
+  "is_null",
+  "is_not_null",
+]);
+
+function buildFilterWhereClause(
+  filters: FilterCondition[],
+  validColumns: Set<string>,
+): { clause: string; params: any[] } {
+  const conditions: string[] = [];
+  const params: any[] = [];
+
+  for (const f of filters) {
+    if (!validColumns.has(f.column) || !VALID_OPS.has(f.op)) continue;
+
+    const col = `"${f.column}"`;
+
+    if (f.op === "is_null") {
+      conditions.push(`${col} IS NULL`);
+    } else if (f.op === "is_not_null") {
+      conditions.push(`${col} IS NOT NULL`);
+    } else if (f.op === "not_like") {
+      conditions.push(`${col} NOT LIKE ?`);
+      params.push(f.value ?? "");
+    } else if (f.op === "in") {
+      const values = (f.value ?? "")
+        .split(",")
+        .map((v) => v.trim())
+        .filter(Boolean);
+      if (values.length === 0) continue;
+      conditions.push(`${col} IN (${values.map(() => "?").join(", ")})`);
+      params.push(...values);
+    } else {
+      conditions.push(`${col} ${f.op} ?`);
+      params.push(f.value ?? "");
+    }
+  }
+
+  if (conditions.length === 0) return { clause: "", params: [] };
+  return { clause: conditions.join(" AND "), params };
+}
 
 const app = new Hono();
 
@@ -78,7 +130,10 @@ app.post("/api/tables", async (c) => {
   }
 
   if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name)) {
-    return c.json({ error: "Table name must be alphanumeric (plus underscores)" }, 400);
+    return c.json(
+      { error: "Table name must be alphanumeric (plus underscores)" },
+      400,
+    );
   }
 
   if (name.startsWith("_brick_") || name.startsWith("sqlite_")) {
@@ -100,14 +155,16 @@ app.post("/api/tables", async (c) => {
     return c.json({ error: "At least one column is required" }, 400);
   }
 
-  const colDefs = cols.map((col: { name: string; type: string; pk?: boolean }) => {
-    const colName = col.name;
-    const colType = col.type || "TEXT";
-    if (col.pk) {
-      return `'${colName}' ${colType} PRIMARY KEY AUTOINCREMENT`;
-    }
-    return `'${colName}' ${colType}`;
-  });
+  const colDefs = cols.map(
+    (col: { name: string; type: string; pk?: boolean }) => {
+      const colName = col.name;
+      const colType = col.type || "TEXT";
+      if (col.pk) {
+        return `'${colName}' ${colType} PRIMARY KEY AUTOINCREMENT`;
+      }
+      return `'${colName}' ${colType}`;
+    },
+  );
 
   try {
     db.query(`CREATE TABLE '${name}' (${colDefs.join(", ")})`).run();
@@ -178,6 +235,7 @@ app.get("/api/tables/:name", (c) => {
   const offset = parseInt(c.req.query("offset") || "0");
   const startDate = c.req.query("start_date");
   const endDate = c.req.query("end_date");
+  const filtersParam = c.req.query("filters");
 
   const tableExists = db
     .query("SELECT name FROM sqlite_master WHERE type='table' AND name = ?")
@@ -187,28 +245,47 @@ app.get("/api/tables/:name", (c) => {
     return c.json({ error: "Table not found" }, 404);
   }
 
-  let rows;
-  let countResult: { count: number };
+  // Build filter WHERE clause
+  let filterClause = "";
+  let filterParams: any[] = [];
+  if (filtersParam) {
+    try {
+      const parsed = JSON.parse(filtersParam) as FilterCondition[];
+      const columns = db.query(`PRAGMA table_info('${tableName}')`).all() as {
+        name: string;
+      }[];
+      const validColumns = new Set(columns.map((col) => col.name));
+      const result = buildFilterWhereClause(parsed, validColumns);
+      filterClause = result.clause;
+      filterParams = result.params;
+    } catch {
+      // ignore invalid filter JSON
+    }
+  }
+
+  // Combine date WHERE and filter WHERE
+  const whereParts: string[] = [];
+  const allParams: any[] = [];
 
   if (startDate && endDate) {
-    rows = db
-      .query(
-        `SELECT * FROM '${tableName}' WHERE start_at < ? AND (end_at >= ? OR end_at IS NULL) LIMIT ? OFFSET ?`,
-      )
-      .all(endDate, startDate, limit, offset);
-    countResult = db
-      .query(
-        `SELECT COUNT(*) as count FROM '${tableName}' WHERE start_at < ? AND (end_at >= ? OR end_at IS NULL)`,
-      )
-      .get(endDate, startDate) as { count: number };
-  } else {
-    rows = db
-      .query(`SELECT * FROM '${tableName}' LIMIT ? OFFSET ?`)
-      .all(limit, offset);
-    countResult = db
-      .query(`SELECT COUNT(*) as count FROM '${tableName}'`)
-      .get() as { count: number };
+    whereParts.push("start_at < ? AND (end_at >= ? OR end_at IS NULL)");
+    allParams.push(endDate, startDate);
   }
+
+  if (filterClause) {
+    whereParts.push(filterClause);
+    allParams.push(...filterParams);
+  }
+
+  const whereSQL =
+    whereParts.length > 0 ? ` WHERE ${whereParts.join(" AND ")}` : "";
+
+  const rows = db
+    .query(`SELECT * FROM '${tableName}'${whereSQL} LIMIT ? OFFSET ?`)
+    .all(...allParams, limit, offset);
+  const countResult = db
+    .query(`SELECT COUNT(*) as count FROM '${tableName}'${whereSQL}`)
+    .get(...allParams) as { count: number };
 
   return c.json({
     rows,
