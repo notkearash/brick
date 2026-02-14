@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
   ColumnDef,
-  ColumnFiltersState,
   PaginationState,
   RowSelectionState,
   SortingState,
@@ -9,10 +8,10 @@ import {
   OnChangeFn,
   flexRender,
   getCoreRowModel,
-  getFilteredRowModel,
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
+import type { FilterCondition } from "@shared/filters";
 import {
   Table,
   TableBody,
@@ -22,8 +21,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { FilterRow } from "./FilterBuilder";
 import {
   PanelLeftClose,
   PanelLeftOpen,
@@ -56,8 +55,8 @@ interface EditingCell {
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
-  searchKey?: string;
-  searchPlaceholder?: string;
+  filters?: FilterCondition[];
+  onFiltersChange?: React.Dispatch<React.SetStateAction<FilterCondition[]>>;
   sidebarCollapsed?: boolean;
   onToggleSidebar?: () => void;
   totalRows?: number;
@@ -75,8 +74,8 @@ interface DataTableProps<TData, TValue> {
 export function DataTable<TData, TValue>({
   columns,
   data,
-  searchKey,
-  searchPlaceholder = "Search...",
+  filters,
+  onFiltersChange,
   sidebarCollapsed,
   onToggleSidebar,
   totalRows,
@@ -91,10 +90,8 @@ export function DataTable<TData, TValue>({
   onDeleteRows,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-  const [filterOpen, setFilterOpen] = useState(false);
   const [columnsOpen, setColumnsOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
@@ -102,7 +99,6 @@ export function DataTable<TData, TValue>({
   const [editError, setEditError] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const filterRef = useRef<HTMLDivElement>(null);
   const columnsRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
 
@@ -122,9 +118,23 @@ export function DataTable<TData, TValue>({
           onClick={t.getToggleAllPageRowsSelectedHandler()}
         >
           {checked ? (
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square"/></svg>
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+              <path
+                d="M2 5l2.5 2.5L8 3"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="square"
+              />
+            </svg>
           ) : indeterminate ? (
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2.5 5h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square"/></svg>
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+              <path
+                d="M2.5 5h5"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="square"
+              />
+            </svg>
           ) : null}
         </button>
       );
@@ -142,7 +152,14 @@ export function DataTable<TData, TValue>({
           onClick={row.getToggleSelectedHandler()}
         >
           {checked && (
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square"/></svg>
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+              <path
+                d="M2 5l2.5 2.5L8 3"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="square"
+              />
+            </svg>
           )}
         </button>
       );
@@ -151,28 +168,22 @@ export function DataTable<TData, TValue>({
     enableHiding: false,
   };
 
-  const allColumns = editMode && onDeleteRows
-    ? [selectColumn, ...columns]
-    : columns;
+  const allColumns =
+    editMode && onDeleteRows ? [selectColumn, ...columns] : columns;
 
   const table = useReactTable({
     data,
     columns: allColumns,
     getCoreRowModel: getCoreRowModel(),
     manualPagination: !!pagination,
-    ...(pagination
-      ? { pageCount, onPaginationChange }
-      : {}),
+    ...(pagination ? { pageCount, onPaginationChange } : {}),
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
-    onColumnFiltersChange: setColumnFilters,
-    getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
     enableRowSelection: editMode,
     state: {
       sorting,
-      columnFilters,
       columnVisibility,
       rowSelection,
       ...(pagination ? { pagination } : {}),
@@ -185,19 +196,13 @@ export function DataTable<TData, TValue>({
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
-        setFilterOpen(false);
-      }
       if (
         columnsRef.current &&
         !columnsRef.current.contains(e.target as Node)
       ) {
         setColumnsOpen(false);
       }
-      if (
-        editorRef.current &&
-        !editorRef.current.contains(e.target as Node)
-      ) {
+      if (editorRef.current && !editorRef.current.contains(e.target as Node)) {
         setEditingCell(null);
         setEditError("");
       }
@@ -228,7 +233,12 @@ export function DataTable<TData, TValue>({
   const canEdit = !!(tableName && pkColumn);
 
   const handleCellClick = useCallback(
-    (e: React.MouseEvent<HTMLTableCellElement>, rowIndex: number, columnId: string, row: Record<string, unknown>) => {
+    (
+      e: React.MouseEvent<HTMLTableCellElement>,
+      rowIndex: number,
+      columnId: string,
+      row: Record<string, unknown>,
+    ) => {
       if (!editMode || !canEdit || !pkColumn || columnId === pkColumn) return;
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
       const cellValue = row[columnId];
@@ -239,7 +249,11 @@ export function DataTable<TData, TValue>({
         columnId,
         value: cellValue === null ? "" : String(cellValue),
         pkValue: row[pkColumn],
-        rect: { top: rect.bottom, left: rect.left, width: Math.max(rect.width, 240) },
+        rect: {
+          top: rect.bottom,
+          left: rect.left,
+          width: Math.max(rect.width, 240),
+        },
       });
     },
     [editMode, canEdit, pkColumn],
@@ -251,11 +265,14 @@ export function DataTable<TData, TValue>({
       setSaving(true);
       setEditError("");
       try {
-        const res = await fetch(`/api/tables/${tableName}/${editingCell.pkValue}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ [editingCell.columnId]: valueToSave }),
-        });
+        const res = await fetch(
+          `/api/tables/${tableName}/${editingCell.pkValue}`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ [editingCell.columnId]: valueToSave }),
+          },
+        );
         if (!res.ok) {
           const err = await res.json().catch(() => ({ error: "Save failed" }));
           setEditError(err.error || "Save failed");
@@ -273,10 +290,7 @@ export function DataTable<TData, TValue>({
     [editingCell, tableName, pkColumn, onRefresh],
   );
 
-  const filterValue = searchKey
-    ? ((table.getColumn(searchKey)?.getFilterValue() as string) ?? "")
-    : "";
-  const hasActiveFilter = filterValue.length > 0;
+  const hasActiveFilter = (filters?.length ?? 0) > 0;
 
   return (
     <div className="flex flex-col h-full">
@@ -301,37 +315,33 @@ export function DataTable<TData, TValue>({
             </>
           )}
 
-          {searchKey && (
-            <div className="relative" ref={filterRef}>
+          {onFiltersChange && schema && (
+            <>
               <Button
                 variant="ghost"
                 size="sm"
-                className={cn(
-                  "h-7 px-2 text-xs gap-1.5",
-                  hasActiveFilter && "text-primary",
-                )}
-                onClick={() => setFilterOpen(!filterOpen)}
+                className="h-7 px-2 text-xs gap-1.5"
+                onClick={() =>
+                  onFiltersChange((prev) => [
+                    ...prev,
+                    { column: schema[0]?.name || "", op: "=", value: "" },
+                  ])
+                }
               >
                 <ListFilter className="h-3.5 w-3.5" />
-                Filters
-                {hasActiveFilter && (
-                  <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                )}
+                Add filter
               </Button>
-              {filterOpen && (
-                <div className="absolute top-full left-0 mt-1 bg-popover text-popover-foreground border rounded-md shadow-md p-2 z-50 min-w-[240px]">
-                  <Input
-                    placeholder={searchPlaceholder}
-                    value={filterValue}
-                    onChange={(e) =>
-                      table.getColumn(searchKey)?.setFilterValue(e.target.value)
-                    }
-                    className="h-8 text-sm"
-                    autoFocus
-                  />
-                </div>
+              {hasActiveFilter && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs text-muted-foreground"
+                  onClick={() => onFiltersChange([])}
+                >
+                  Clear ({filters!.length})
+                </Button>
               )}
-            </div>
+            </>
           )}
 
           <div className="relative" ref={columnsRef}>
@@ -394,7 +404,9 @@ export function DataTable<TData, TValue>({
                   className="h-7 px-2 text-xs gap-1.5 text-destructive hover:text-destructive"
                   disabled={deleting}
                   onClick={async () => {
-                    const selected = table.getSelectedRowModel().rows.map((r) => r.original);
+                    const selected = table
+                      .getSelectedRowModel()
+                      .rows.map((r) => r.original);
                     setDeleting(true);
                     try {
                       await onDeleteRows(selected);
@@ -405,7 +417,9 @@ export function DataTable<TData, TValue>({
                   }}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
-                  {deleting ? "Deleting..." : `Delete (${Object.keys(rowSelection).length})`}
+                  {deleting
+                    ? "Deleting..."
+                    : `Delete (${Object.keys(rowSelection).length})`}
                 </Button>
               )}
             </>
@@ -414,7 +428,7 @@ export function DataTable<TData, TValue>({
 
         <div className="flex items-center gap-1">
           <span className="text-xs text-muted-foreground mr-1">
-            {totalRows ?? table.getFilteredRowModel().rows.length} rows
+            {totalRows ?? data.length} rows
           </span>
 
           <div className="w-px h-4 bg-border mx-1" />
@@ -430,7 +444,13 @@ export function DataTable<TData, TValue>({
           </Button>
           <select
             value={table.getState().pagination.pageSize}
-            onChange={(e) => { const s = Number(e.target.value); table.setPageSize(s); table.setPageIndex(0); localStorage.setItem("brick-page-size", String(s)); e.target.blur(); }}
+            onChange={(e) => {
+              const s = Number(e.target.value);
+              table.setPageSize(s);
+              table.setPageIndex(0);
+              localStorage.setItem("brick-page-size", String(s));
+              e.target.blur();
+            }}
             className="h-7 bg-transparent text-xs tabular-nums text-muted-foreground border rounded px-1 cursor-pointer"
           >
             {[25, 50, 100, 250].map((size) => (
@@ -469,6 +489,25 @@ export function DataTable<TData, TValue>({
         </div>
       </div>
 
+      {hasActiveFilter &&
+        onFiltersChange &&
+        schema &&
+        (filters ?? []).map((filter, i) => (
+          <FilterRow
+            key={i}
+            filter={filter}
+            schema={schema}
+            onChange={(patch) =>
+              onFiltersChange((prev) =>
+                prev.map((f, j) => (j === i ? { ...f, ...patch } : f)),
+              )
+            }
+            onRemove={() =>
+              onFiltersChange((prev) => prev.filter((_, j) => j !== i))
+            }
+          />
+        ))}
+
       <div className="flex-1 overflow-auto min-h-0">
         <Table>
           <TableHeader className="sticky top-0 bg-background z-10">
@@ -495,12 +534,30 @@ export function DataTable<TData, TValue>({
                   data-state={row.getIsSelected() && "selected"}
                 >
                   {row.getVisibleCells().map((cell) => {
-                    const isEditable = editMode && canEdit && cell.column.id !== pkColumn && cell.column.id !== "_select";
+                    const isEditable =
+                      editMode &&
+                      canEdit &&
+                      cell.column.id !== pkColumn &&
+                      cell.column.id !== "_select";
                     return (
                       <TableCell
                         key={cell.id}
-                        className={cn("select-text", isEditable && "cursor-pointer hover:outline hover:outline-1 hover:outline-dashed hover:outline-amber-500")}
-                        onClick={isEditable ? (e) => handleCellClick(e, row.index, cell.column.id, row.original as Record<string, unknown>) : undefined}
+                        className={cn(
+                          "select-text",
+                          isEditable &&
+                            "cursor-pointer hover:outline hover:outline-1 hover:outline-dashed hover:outline-amber-500",
+                        )}
+                        onClick={
+                          isEditable
+                            ? (e) =>
+                                handleCellClick(
+                                  e,
+                                  row.index,
+                                  cell.column.id,
+                                  row.original as Record<string, unknown>,
+                                )
+                            : undefined
+                        }
                       >
                         {flexRender(
                           cell.column.columnDef.cell,
@@ -565,13 +622,18 @@ export function DataTable<TData, TValue>({
               disabled={saving}
             >
               {saving ? "Saving..." : "Save"}
-              {!saving && <span className="ml-1 text-[10px] opacity-60">⌘↵</span>}
+              {!saving && (
+                <span className="ml-1 text-[10px] opacity-60">⌘↵</span>
+              )}
             </Button>
             <Button
               variant="ghost"
               size="sm"
               className="h-7 text-xs"
-              onClick={() => { setEditingCell(null); setEditError(""); }}
+              onClick={() => {
+                setEditingCell(null);
+                setEditError("");
+              }}
             >
               Cancel
             </Button>
