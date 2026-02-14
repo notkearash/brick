@@ -27,15 +27,6 @@ type ItemType = "table" | "calendar";
 
 const TYPES = ["TEXT", "INTEGER", "REAL", "BLOB"];
 
-const CALENDAR_SCHEMA = [
-  "id INTEGER PRIMARY KEY AUTOINCREMENT",
-  "title TEXT NOT NULL",
-  "start_at TEXT NOT NULL",
-  "end_at TEXT",
-  "description TEXT",
-  "color TEXT",
-];
-
 export function CreateTableDialog({ onClose, onCreated, bricked }: CreateTableDialogProps) {
   const [itemType, setItemType] = useState<ItemType | null>(bricked ? null : "table");
   const [name, setName] = useState("");
@@ -138,33 +129,35 @@ export function CreateTableDialog({ onClose, onCreated, bricked }: CreateTableDi
         <CardHeader>
           <CardTitle className="text-lg">New item</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <button
-            className={cn(
-              "w-full flex items-center gap-3 rounded-md border p-3 text-sm font-medium transition-colors",
-              "hover:ring-1 hover:ring-ring cursor-pointer text-left",
-            )}
-            onClick={() => setItemType("table")}
-          >
-            <Table2 className="h-5 w-5 shrink-0 text-muted-foreground" />
-            <div>
-              <div>Table</div>
-              <div className="text-xs text-muted-foreground font-normal">Custom columns, data grid view</div>
-            </div>
-          </button>
-          <button
-            className={cn(
-              "w-full flex items-center gap-3 rounded-md border p-3 text-sm font-medium transition-colors",
-              "hover:ring-1 hover:ring-ring cursor-pointer text-left",
-            )}
-            onClick={() => setItemType("calendar")}
-          >
-            <Calendar className="h-5 w-5 shrink-0 text-muted-foreground" />
-            <div>
-              <div>Calendar</div>
-              <div className="text-xs text-muted-foreground font-normal">Events with dates, month/week/day views</div>
-            </div>
-          </button>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              className={cn(
+                "flex flex-col items-center gap-2 rounded-md border p-4 text-sm font-medium transition-colors",
+                "hover:ring-1 hover:ring-ring cursor-pointer",
+              )}
+              onClick={() => setItemType("table")}
+            >
+              <Table2 className="h-6 w-6 text-muted-foreground" />
+              <div className="text-center">
+                <div>Table</div>
+                <div className="text-xs text-muted-foreground font-normal">Custom columns, data grid</div>
+              </div>
+            </button>
+            <button
+              className={cn(
+                "flex flex-col items-center gap-2 rounded-md border p-4 text-sm font-medium transition-colors",
+                "hover:ring-1 hover:ring-ring cursor-pointer",
+              )}
+              onClick={() => setItemType("calendar")}
+            >
+              <Calendar className="h-6 w-6 text-muted-foreground" />
+              <div className="text-center">
+                <div>Calendar</div>
+                <div className="text-xs text-muted-foreground font-normal">Events with dates</div>
+              </div>
+            </button>
+          </div>
         </CardContent>
         <CardFooter className="justify-end">
           <Button variant="ghost" size="sm" onClick={onClose}>
@@ -195,14 +188,6 @@ export function CreateTableDialog({ onClose, onCreated, bricked }: CreateTableDi
                 if (e.key === "Enter") handleSubmitCalendar();
               }}
             />
-          </div>
-          <div>
-            <label className="text-sm text-muted-foreground">Schema</label>
-            <div className="mt-1 rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground font-mono space-y-0.5">
-              {CALENDAR_SCHEMA.map((col) => (
-                <div key={col}>{col}</div>
-              ))}
-            </div>
           </div>
         </CardContent>
         <CardFooter className="justify-between">
