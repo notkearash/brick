@@ -7,7 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Plus, X, Table2, Calendar } from "lucide-react";
+import { Plus, X, Table2, Calendar, FileText } from "lucide-react";
 import { DialogShell } from ".";
 import type { ViewType } from "@/hooks/useTablePrefs";
 import { cn } from "@/lib/utils";
@@ -23,7 +23,7 @@ interface ColumnDef {
   type: string;
 }
 
-type ItemType = "table" | "calendar";
+type ItemType = "table" | "calendar" | "document";
 
 const TYPES = ["TEXT", "INTEGER", "REAL", "BLOB"];
 
@@ -87,6 +87,46 @@ export function CreateTableDialog({ onClose, onCreated, bricked }: CreateTableDi
     }
   }
 
+  async function setPreferences(scope: string, prefs: Record<string, string>) {
+    await Promise.all(
+      Object.entries(prefs).map(([key, value]) =>
+        fetch("/api/brick/preferences", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key, scope, value }),
+        }),
+      ),
+    );
+  }
+
+  async function handleSubmitDocument() {
+    setLoading(true);
+    setError(null);
+
+    const docName = `doc_${Date.now()}`;
+    try {
+      const res = await fetch("/api/tables", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: docName, type: "document" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+
+      await setPreferences(docName, {
+        view_type: "document",
+        icon: "file-text",
+        display_name: "Untitled",
+      });
+
+      onCreated(docName, "document");
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function handleSubmitCalendar() {
     const trimmedName = name.trim();
     if (!trimmedName) return;
@@ -103,15 +143,9 @@ export function CreateTableDialog({ onClose, onCreated, bricked }: CreateTableDi
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
 
-      await fetch("/api/brick/preferences", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: "view_type", scope: trimmedName, value: "calendar" }),
-      });
-      await fetch("/api/brick/preferences", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: "icon", scope: trimmedName, value: "calendar" }),
+      await setPreferences(trimmedName, {
+        view_type: "calendar",
+        icon: "calendar",
       });
 
       onCreated(trimmedName, "calendar");
@@ -122,7 +156,6 @@ export function CreateTableDialog({ onClose, onCreated, bricked }: CreateTableDi
     }
   }
 
-  // Step 1: Type picker
   if (itemType === null) {
     return (
       <DialogShell onClose={onClose} loading={loading}>
@@ -130,7 +163,7 @@ export function CreateTableDialog({ onClose, onCreated, bricked }: CreateTableDi
           <CardTitle className="text-lg">New item</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <button
               className={cn(
                 "flex flex-col items-center gap-2 rounded-md border p-4 text-sm font-medium transition-colors",
@@ -157,6 +190,19 @@ export function CreateTableDialog({ onClose, onCreated, bricked }: CreateTableDi
                 <div className="text-xs text-muted-foreground font-normal">Events with dates</div>
               </div>
             </button>
+            <button
+              className={cn(
+                "flex flex-col items-center gap-2 rounded-md border p-4 text-sm font-medium transition-colors",
+                "hover:ring-1 hover:ring-ring cursor-pointer",
+              )}
+              onClick={() => setItemType("document")}
+            >
+              <FileText className="h-6 w-6 text-muted-foreground" />
+              <div className="text-center">
+                <div>Document</div>
+                <div className="text-xs text-muted-foreground font-normal">Rich text notes</div>
+              </div>
+            </button>
           </div>
         </CardContent>
         <CardFooter className="justify-end">
@@ -168,7 +214,43 @@ export function CreateTableDialog({ onClose, onCreated, bricked }: CreateTableDi
     );
   }
 
-  // Step 2b: Calendar form
+  if (itemType === "document") {
+    return (
+      <DialogShell onClose={onClose} loading={loading}>
+        <CardHeader>
+          <CardTitle className="text-lg">Create document</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            A new document will be created. The title becomes the table name.
+          </p>
+        </CardContent>
+        <CardFooter className="justify-between">
+          <div>
+            {error && <p className="text-sm text-destructive">{error}</p>}
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { setItemType(bricked ? null : "table"); setError(null); }}
+              disabled={loading}
+            >
+              {bricked ? "Back" : "Cancel"}
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleSubmitDocument}
+              disabled={loading}
+            >
+              {loading ? "Creating..." : "Create"}
+            </Button>
+          </div>
+        </CardFooter>
+      </DialogShell>
+    );
+  }
+
   if (itemType === "calendar") {
     return (
       <DialogShell onClose={onClose} loading={loading}>
@@ -216,7 +298,6 @@ export function CreateTableDialog({ onClose, onCreated, bricked }: CreateTableDi
     );
   }
 
-  // Step 2a: Table form (existing)
   return (
     <DialogShell onClose={onClose} loading={loading}>
       <CardHeader>

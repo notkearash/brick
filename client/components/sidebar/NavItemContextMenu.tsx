@@ -7,7 +7,7 @@ import {
   ContextMenuSeparator,
 } from "@/components/ui/context-menu";
 import type { TableColor, TableIcon, TablePref, ViewType } from "@/hooks/useTablePrefs";
-import { COLOR_VALUES, TABLE_ICON_OPTIONS, CALENDAR_ICON_OPTIONS } from ".";
+import { COLOR_VALUES, TABLE_ICON_OPTIONS, CALENDAR_ICON_OPTIONS, DOCUMENT_ICON_OPTIONS } from ".";
 
 interface NavItemContextMenuProps {
   bricked: boolean | null;
@@ -28,7 +28,7 @@ export function NavItemContextMenu({
   onSetPref,
   onDeleteTable,
 }: NavItemContextMenuProps) {
-  const iconOptions = viewType === "calendar" ? CALENDAR_ICON_OPTIONS : TABLE_ICON_OPTIONS;
+  const iconOptions = viewType === "calendar" ? CALENDAR_ICON_OPTIONS : viewType === "document" ? DOCUMENT_ICON_OPTIONS : TABLE_ICON_OPTIONS;
   return (
     <ContextMenuContent className="px-2 py-1.5 min-w-0">
       {bricked && (

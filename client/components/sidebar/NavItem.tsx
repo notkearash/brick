@@ -10,7 +10,7 @@ import {
   ContextMenu,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import type { TablePref, ViewType } from "@/hooks/useTablePrefs";
+import { getViewRoute, type TablePref, type ViewType } from "@/hooks/useTablePrefs";
 import { getTableIcon, COLOR_CLASSES } from ".";
 import { NavItemContextMenu } from "./NavItemContextMenu";
 
@@ -46,7 +46,7 @@ export function NavItem({
   const colorClasses = COLOR_CLASSES[color];
   const hasContextMenu = bricked || editMode;
   const showGrip = !!dragHandleRef && !collapsed;
-  const linkBase = viewType === "calendar" ? "/calendar" : "/table";
+  const linkBase = getViewRoute(viewType);
 
   const navLink = (
     <NavLink
@@ -83,7 +83,7 @@ export function NavItem({
             : undefined
         }
       />
-      {!collapsed && table}
+      {!collapsed && (pref.displayName || table)}
     </NavLink>
   );
 
@@ -106,7 +106,7 @@ export function NavItem({
             {gripHandle}
           </div>
         </TooltipTrigger>
-        <TooltipContent side="right">{table}</TooltipContent>
+        <TooltipContent side="right">{pref.displayName || table}</TooltipContent>
       </Tooltip>
     );
   }
@@ -122,7 +122,7 @@ export function NavItem({
             </div>
           </TooltipTrigger>
         </ContextMenuTrigger>
-        <TooltipContent side="right">{table}</TooltipContent>
+        <TooltipContent side="right">{pref.displayName || table}</TooltipContent>
       </Tooltip>
       <NavItemContextMenu
         bricked={bricked}
