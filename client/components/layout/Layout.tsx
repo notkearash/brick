@@ -1,35 +1,46 @@
-import { useCallback, useMemo, useState } from "react";
-import { Outlet } from "react-router";
-import { Plus } from "lucide-react";
 import {
-  DndContext,
   closestCenter,
+  DndContext,
+  type DragEndEvent,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
-  type DragEndEvent,
 } from "@dnd-kit/core";
 import {
-  SortableContext,
-  verticalListSortingStrategy,
-  sortableKeyboardCoordinates,
   arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { cn } from "@/lib/utils";
-import { useBrickStatus } from "@/hooks/useBrickStatus";
-import { useDatabase } from "@/hooks/useDatabase";
-import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
-import { useTablePrefs } from "@/hooks/useTablePrefs";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { Plus } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Outlet } from "react-router";
 import { BrickUpDialog } from "@/components/dialogs/BrickUpDialog";
 import { CreateTableDialog } from "@/components/dialogs/CreateTableDialog";
 import { DeleteTableDialog } from "@/components/dialogs/DeleteTableDialog";
 import {
-  SidebarHeader,
   SidebarFooter,
+  SidebarHeader,
   SortableNavItem,
 } from "@/components/sidebar";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { useBrickStatus } from "@/hooks/useBrickStatus";
+import { useDatabase } from "@/hooks/useDatabase";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { getViewRoute, useTablePrefs } from "@/hooks/useTablePrefs";
+import { cn } from "@/lib/utils";
+
+export interface LayoutContext {
+  collapsed: boolean;
+  setCollapsed: (v: boolean | ((prev: boolean) => boolean)) => void;
+  bricked: boolean | null;
+  refreshBrickStatus: () => void;
+  editMode: boolean;
+  setEditMode: (v: boolean | ((prev: boolean) => boolean)) => void;
+  tables: string[];
+  refreshTables: () => void;
+}
 
 export function Layout() {
   const [collapsed, setCollapsed] = useState(false);
@@ -41,7 +52,13 @@ export function Layout() {
 
   const { tables, dbPath, loadDb, navigate } = useDatabase();
   const { bricked, refresh: refreshBrickStatus } = useBrickStatus();
-  const { prefs: tablePrefs, setPref: setTablePref, tableOrder, setTableOrder } = useTablePrefs(bricked);
+  const {
+    prefs: tablePrefs,
+    setPref: setTablePref,
+    tableOrder,
+    setTableOrder,
+    refresh: refreshPrefs,
+  } = useTablePrefs(bricked);
 
   const sortedTables = useMemo(() => {
     if (tableOrder.length === 0) return tables;
@@ -53,13 +70,30 @@ export function Layout() {
     });
   }, [tables, tableOrder]);
 
-  useKeyboardShortcuts({ tables: sortedTables, navigate, setCollapsed, setEditMode, tablePrefs });
+  useKeyboardShortcuts({
+    tables: sortedTables,
+    navigate,
+    setCollapsed,
+    setEditMode,
+    tablePrefs,
+  });
+
+  useEffect(() => {
+    const handler = () => {
+      loadDb();
+      refreshPrefs();
+    };
+    window.addEventListener("brick:refresh-tables", handler);
+    return () => window.removeEventListener("brick:refresh-tables", handler);
+  }, [loadDb, refreshPrefs]);
 
   const canReorder = editMode && bricked === true;
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
   );
 
   const handleDragEnd = useCallback(
@@ -127,6 +161,7 @@ export function Layout() {
             <>
               <div className="border-t border-dashed border-muted-foreground/30 -mx-2 my-3" />
               <button
+                type="button"
                 className={cn(
                   "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors w-full cursor-pointer text-muted-foreground hover:text-foreground hover:ring-1 hover:ring-ring",
                   collapsed && "justify-center px-0",
@@ -181,8 +216,8 @@ export function Layout() {
           onCreated={(name, viewType) => {
             setShowCreateTable(false);
             loadDb();
-            const base = viewType === "calendar" ? "/calendar" : "/table";
-            navigate(`${base}/${name}`);
+            refreshPrefs();
+            navigate(`${getViewRoute(viewType)}/${name}`);
           }}
         />
       )}
@@ -190,6 +225,8 @@ export function Layout() {
       {deleteTable && (
         <DeleteTableDialog
           tableName={deleteTable}
+          displayName={tablePrefs?.[deleteTable]?.displayName}
+          skipConfirm={tablePrefs?.[deleteTable]?.viewType === "document"}
           onClose={() => setDeleteTable(null)}
           onDeleted={() => {
             setDeleteTable(null);

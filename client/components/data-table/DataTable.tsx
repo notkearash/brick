@@ -1,17 +1,30 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import type { FilterCondition } from "@shared/filters";
 import {
-  ColumnDef,
-  PaginationState,
-  RowSelectionState,
-  SortingState,
-  VisibilityState,
-  OnChangeFn,
+  type ColumnDef,
   flexRender,
   getCoreRowModel,
   getSortedRowModel,
+  type OnChangeFn,
+  type PaginationState,
+  type RowSelectionState,
+  type SortingState,
   useReactTable,
+  type VisibilityState,
 } from "@tanstack/react-table";
-import type { FilterCondition } from "@shared/filters";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Columns3,
+  ListFilter,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Plus,
+  RefreshCw,
+  Trash2,
+} from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -20,20 +33,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { FilterRow } from "./FilterBuilder";
-import {
-  PanelLeftClose,
-  PanelLeftOpen,
-  ListFilter,
-  Columns3,
-  Plus,
-  Trash2,
-  ChevronLeft,
-  ChevronRight,
-  RefreshCw,
-} from "lucide-react";
 
 interface SchemaColumn {
   cid: number;
@@ -109,6 +110,7 @@ export function DataTable<TData, TValue>({
       const indeterminate = t.getIsSomePageRowsSelected();
       return (
         <button
+          type="button"
           className={cn(
             "h-3.5 w-3.5 border flex items-center justify-center cursor-pointer",
             checked || indeterminate
@@ -118,7 +120,13 @@ export function DataTable<TData, TValue>({
           onClick={t.getToggleAllPageRowsSelectedHandler()}
         >
           {checked ? (
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+            <svg
+              aria-hidden="true"
+              width="10"
+              height="10"
+              viewBox="0 0 10 10"
+              fill="none"
+            >
               <path
                 d="M2 5l2.5 2.5L8 3"
                 stroke="currentColor"
@@ -127,7 +135,13 @@ export function DataTable<TData, TValue>({
               />
             </svg>
           ) : indeterminate ? (
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+            <svg
+              aria-hidden="true"
+              width="10"
+              height="10"
+              viewBox="0 0 10 10"
+              fill="none"
+            >
               <path
                 d="M2.5 5h5"
                 stroke="currentColor"
@@ -143,6 +157,7 @@ export function DataTable<TData, TValue>({
       const checked = row.getIsSelected();
       return (
         <button
+          type="button"
           className={cn(
             "h-3.5 w-3.5 border flex items-center justify-center cursor-pointer",
             checked
@@ -152,7 +167,13 @@ export function DataTable<TData, TValue>({
           onClick={row.getToggleSelectedHandler()}
         >
           {checked && (
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+            <svg
+              aria-hidden="true"
+              width="10"
+              height="10"
+              viewBox="0 0 10 10"
+              fill="none"
+            >
               <path
                 d="M2 5l2.5 2.5L8 3"
                 stroke="currentColor"
@@ -228,7 +249,7 @@ export function DataTable<TData, TValue>({
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [table]);
+  }, [table, onRefresh]);
 
   const canEdit = !!(tableName && pkColumn);
 
@@ -338,7 +359,7 @@ export function DataTable<TData, TValue>({
                   className="h-7 px-2 text-xs text-muted-foreground"
                   onClick={() => onFiltersChange([])}
                 >
-                  Clear ({filters!.length})
+                  Clear ({filters?.length ?? 0})
                 </Button>
               )}
             </>
@@ -355,14 +376,14 @@ export function DataTable<TData, TValue>({
               Columns
             </Button>
             {columnsOpen && (
-              <div className="absolute top-full left-0 mt-1 bg-popover text-popover-foreground border rounded-md shadow-md p-1 z-50 min-w-[160px] max-h-[300px] overflow-auto">
+              <div className="absolute top-full left-0 mt-1 bg-popover text-popover-foreground border rounded-md shadow-md p-1 z-50 min-w-40 max-h-75 overflow-auto">
                 {table
                   .getAllColumns()
                   .filter((col) => col.getCanHide())
                   .map((column) => (
                     <label
                       key={column.id}
-                      className="flex items-center gap-2 px-2 py-1.5 text-xs cursor-pointer hover:outline hover:outline-1 hover:outline-dashed hover:outline-amber-500 rounded"
+                      className="flex items-center gap-2 px-2 py-1.5 text-xs cursor-pointer hover:outline hover:outline-dashed hover:outline-amber-500 rounded"
                     >
                       <input
                         type="checkbox"
@@ -391,7 +412,9 @@ export function DataTable<TData, TValue>({
                       body: "{}",
                     });
                     if (res.ok) onRefresh?.();
-                  } catch {}
+                  } catch {
+                    toast.error("Failed to add row");
+                  }
                 }}
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -494,6 +517,7 @@ export function DataTable<TData, TValue>({
         schema &&
         (filters ?? []).map((filter, i) => (
           <FilterRow
+            // biome-ignore lint/suspicious/noArrayIndexKey: filters have no stable id
             key={i}
             filter={filter}
             schema={schema}
@@ -545,7 +569,7 @@ export function DataTable<TData, TValue>({
                         className={cn(
                           "select-text",
                           isEditable &&
-                            "cursor-pointer hover:outline hover:outline-1 hover:outline-dashed hover:outline-amber-500",
+                            "cursor-pointer hover:outline hover:outline-dashed hover:outline-amber-500",
                         )}
                         onClick={
                           isEditable
@@ -597,7 +621,7 @@ export function DataTable<TData, TValue>({
             {editingCell.columnId}
           </div>
           <textarea
-            className="w-full min-h-[60px] bg-background border rounded px-2 py-1.5 text-sm resize-y focus:outline-none focus:ring-1 focus:ring-ring"
+            className="w-full min-h-15 bg-background border rounded px-2 py-1.5 text-sm resize-y focus:outline-none focus:ring-1 focus:ring-ring"
             value={editValue}
             onChange={(e) => setEditValue(e.target.value)}
             onKeyDown={(e) => {
@@ -609,6 +633,7 @@ export function DataTable<TData, TValue>({
                 setEditError("");
               }
             }}
+            // biome-ignore lint/a11y/noAutofocus: intentional focus on cell editor
             autoFocus
           />
           {editError && (

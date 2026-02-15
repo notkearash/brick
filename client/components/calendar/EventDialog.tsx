@@ -1,7 +1,9 @@
-import { useState } from "react";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
+import { useState } from "react";
+import { DialogShell } from "@/components/dialogs";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import {
   CardContent,
   CardFooter,
@@ -9,16 +11,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { DialogShell } from "@/components/dialogs";
 import { cn } from "@/lib/utils";
 import type { CalendarEvent } from ".";
-import { EVENT_COLOR_NAMES, EVENT_COLORS } from ".";
+import { EVENT_COLOR_NAMES } from ".";
 
 interface EventDialogProps {
   tableName: string;
@@ -92,7 +92,7 @@ export function EventDialog({
 
     try {
       const url = isEdit
-        ? `/api/tables/${tableName}/${event!.id}`
+        ? `/api/tables/${tableName}/${event?.id}`
         : `/api/tables/${tableName}`;
       const res = await fetch(url, {
         method: isEdit ? "PUT" : "POST",
@@ -102,8 +102,8 @@ export function EventDialog({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
       onSaved();
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Unknown error");
     } finally {
       setLoading(false);
     }
@@ -128,8 +128,8 @@ export function EventDialog({
         throw new Error(data.error || "Failed");
       }
       onSaved();
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Unknown error");
     } finally {
       setLoading(false);
     }
@@ -144,8 +144,14 @@ export function EventDialog({
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
-          <label className="text-sm text-muted-foreground">Title</label>
+          <label
+            htmlFor="event-title"
+            className="text-sm text-muted-foreground"
+          >
+            Title
+          </label>
           <Input
+            id="event-title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Event title"
@@ -159,7 +165,12 @@ export function EventDialog({
 
         <div className="space-y-3">
           <div>
-            <label className="text-sm text-muted-foreground">Start</label>
+            <label
+              htmlFor="event-start-time"
+              className="text-sm text-muted-foreground"
+            >
+              Start
+            </label>
             <div className="flex gap-2 mt-1">
               <Popover>
                 <PopoverTrigger asChild>
@@ -181,6 +192,7 @@ export function EventDialog({
                 </PopoverContent>
               </Popover>
               <Input
+                id="event-start-time"
                 type="time"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
@@ -189,7 +201,10 @@ export function EventDialog({
             </div>
           </div>
           <div>
-            <label className="text-sm text-muted-foreground">
+            <label
+              htmlFor="event-end-time"
+              className="text-sm text-muted-foreground"
+            >
               End (optional)
             </label>
             <div className="flex gap-2 mt-1">
@@ -213,6 +228,7 @@ export function EventDialog({
                 </PopoverContent>
               </Popover>
               <Input
+                id="event-end-time"
                 type="time"
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
@@ -223,8 +239,14 @@ export function EventDialog({
         </div>
 
         <div>
-          <label className="text-sm text-muted-foreground">Description</label>
+          <label
+            htmlFor="event-description"
+            className="text-sm text-muted-foreground"
+          >
+            Description
+          </label>
           <textarea
+            id="event-description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Optional description..."
@@ -233,10 +255,11 @@ export function EventDialog({
         </div>
 
         <div>
-          <label className="text-sm text-muted-foreground">Color</label>
+          <span className="text-sm text-muted-foreground">Color</span>
           <div className="flex gap-2 mt-1.5">
             {EVENT_COLOR_NAMES.map((c) => (
               <button
+                type="button"
                 key={c}
                 className={cn(
                   "h-6 w-6 rounded-full cursor-pointer transition-all",
@@ -260,9 +283,29 @@ export function EventDialog({
       <CardFooter className="justify-between">
         <div className="flex items-center gap-2">
           {error && <p className="text-sm text-destructive">{error}</p>}
-          {isEdit && (confirmingDelete ? (
-            <div className="flex items-center gap-1">
-              <span className="text-sm text-muted-foreground">Delete?</span>
+          {isEdit &&
+            (confirmingDelete ? (
+              <div className="flex items-center gap-1">
+                <span className="text-sm text-muted-foreground">Delete?</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  onClick={handleDelete}
+                  disabled={loading}
+                >
+                  Yes
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setConfirmingDelete(false)}
+                  disabled={loading}
+                >
+                  No
+                </Button>
+              </div>
+            ) : (
               <Button
                 variant="ghost"
                 size="sm"
@@ -270,28 +313,9 @@ export function EventDialog({
                 onClick={handleDelete}
                 disabled={loading}
               >
-                Yes
+                Delete
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setConfirmingDelete(false)}
-                disabled={loading}
-              >
-                No
-              </Button>
-            </div>
-          ) : (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-destructive hover:text-destructive"
-              onClick={handleDelete}
-              disabled={loading}
-            >
-              Delete
-            </Button>
-          ))}
+            ))}
         </div>
         <div className="flex gap-2">
           <Button

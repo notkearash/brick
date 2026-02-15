@@ -1,18 +1,18 @@
 import {
-  startOfWeek,
-  endOfWeek,
   eachDayOfInterval,
   eachHourOfInterval,
+  endOfWeek,
   format,
   isSameDay,
   isToday,
   parseISO,
-  startOfDay,
   setHours,
+  startOfDay,
+  startOfWeek,
 } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { CalendarEvent } from ".";
-import { getEventClasses, getEventsForDay, isAllDay, HOUR_HEIGHT } from ".";
+import { getEventClasses, getEventsForDay, HOUR_HEIGHT, isAllDay } from ".";
 
 interface WeekViewProps {
   currentDate: Date;
@@ -56,6 +56,7 @@ export function WeekView({
                 >
                   {dayAllDay.map((event) => (
                     <button
+                      type="button"
                       key={event.id}
                       className={cn(
                         "w-full text-left text-[10px] leading-tight px-1 py-0.5 rounded truncate cursor-pointer",
@@ -126,9 +127,10 @@ export function WeekView({
               style={{ gridColumn: dayIndex + 2, gridRow: "1 / -1" }}
             >
               {hours.map((hour) => (
-                <div
+                <button
+                  type="button"
                   key={hour.toISOString()}
-                  className="border-b border-border/50 cursor-pointer hover:bg-muted/30"
+                  className="block w-full border-b border-border/50 cursor-pointer hover:bg-muted/30"
                   style={{ height: HOUR_HEIGHT }}
                   onClick={() => {
                     const d = new Date(day);
@@ -168,9 +170,10 @@ export function WeekView({
 
                   return (
                     <button
+                      type="button"
                       key={event.id}
                       className={cn(
-                        "absolute left-0.5 right-0.5 rounded px-1 py-0.5 text-[10px] leading-tight overflow-hidden cursor-pointer z-[5]",
+                        "absolute left-0.5 right-0.5 rounded px-1 py-0.5 text-[10px] leading-tight overflow-hidden cursor-pointer z-5",
                         getEventClasses(event.color),
                       )}
                       style={{ top, height }}

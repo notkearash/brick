@@ -44,7 +44,7 @@ export function setTheme(theme: Theme) {
   currentTheme = theme;
   localStorage.setItem(STORAGE_KEY, theme);
   applyTheme(theme);
-  listeners.forEach((l) => l());
+  for (const l of listeners) l();
 }
 
 export function useTheme() {

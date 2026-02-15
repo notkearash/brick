@@ -1,4 +1,4 @@
-import { useTheme, type Theme } from "@/hooks/useTheme";
+import { type Theme, useTheme } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 
 const options: { value: Theme; label: string; description: string }[] = [
@@ -19,6 +19,7 @@ export function Settings() {
         <div className="flex gap-2">
           {options.map((opt) => (
             <button
+              type="button"
               key={opt.value}
               onClick={() => setTheme(opt.value)}
               className={cn(

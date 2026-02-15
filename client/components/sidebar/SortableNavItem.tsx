@@ -1,7 +1,7 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { NavItem } from "./NavItem";
 import type { NavItemProps } from "./NavItem";
+import { NavItem } from "./NavItem";
 
 export function SortableNavItem(
   props: Omit<NavItemProps, "dragHandleRef" | "dragHandleListeners">,

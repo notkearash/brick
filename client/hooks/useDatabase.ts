@@ -1,6 +1,6 @@
-import { useNavigate } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
+import { useNavigate } from "react-router";
 
 export function useDatabase() {
   const navigate = useNavigate();
@@ -11,7 +11,7 @@ export function useDatabase() {
     queryFn: () => fetch("/api/config").then((r) => r.json()),
   });
 
-  const { data: tables = [] } = useQuery({
+  const { data: tables = [] } = useQuery<string[]>({
     queryKey: ["tables"],
     queryFn: () => fetch("/api/tables").then((r) => r.json()),
     enabled: !!config?.dbPath,

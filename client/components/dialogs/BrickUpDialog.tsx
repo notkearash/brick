@@ -10,7 +10,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { DialogShell } from ".";
 
-const isTauri = !!(window as any).__TAURI_INTERNALS__;
+const isTauri = !!(window as unknown as Record<string, unknown>)
+  .__TAURI_INTERNALS__;
 
 interface BrickUpDialogProps {
   dbPath: string;
@@ -20,8 +21,8 @@ interface BrickUpDialogProps {
 
 function defaultCopyPath(dbPath: string): string {
   const dot = dbPath.lastIndexOf(".");
-  if (dot === -1) return dbPath + "-bricked";
-  return dbPath.slice(0, dot) + "-bricked" + dbPath.slice(dot);
+  if (dot === -1) return `${dbPath}-bricked`;
+  return `${dbPath.slice(0, dot)}-bricked${dbPath.slice(dot)}`;
 }
 
 async function doCopyAndBrick(destPath: string): Promise<void> {
@@ -56,8 +57,8 @@ export function BrickUpDialog({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
       onBricked();
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Unknown error");
     } finally {
       setLoading(false);
     }
@@ -78,8 +79,8 @@ export function BrickUpDialog({
       }
       await doCopyAndBrick(picked);
       onBricked();
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Unknown error");
     } finally {
       setLoading(false);
     }
@@ -91,8 +92,8 @@ export function BrickUpDialog({
     try {
       await doCopyAndBrick(destPath);
       onBricked();
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Unknown error");
     } finally {
       setLoading(false);
     }
@@ -149,10 +150,14 @@ export function BrickUpDialog({
       ) : (
         <>
           <CardContent className="space-y-3">
-            <label className="text-sm text-muted-foreground">
+            <label
+              htmlFor="brick-copy-path"
+              className="text-sm text-muted-foreground"
+            >
               Save copy as:
             </label>
             <Input
+              id="brick-copy-path"
               value={destPath}
               onChange={(e) => setDestPath(e.target.value)}
               disabled={loading}

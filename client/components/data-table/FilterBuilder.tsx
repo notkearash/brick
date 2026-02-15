@@ -1,5 +1,7 @@
-import { Input } from "@/components/ui/input";
+import { FILTER_OPERATORS, type FilterCondition } from "@shared/filters";
+import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -7,8 +9,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { X } from "lucide-react";
-import { type FilterCondition, FILTER_OPERATORS } from "@shared/filters";
 
 interface SchemaColumn {
   cid: number;
@@ -26,15 +26,25 @@ interface FilterRowProps {
   onRemove: () => void;
 }
 
-export function FilterRow({ filter, schema, onChange, onRemove }: FilterRowProps) {
+export function FilterRow({
+  filter,
+  schema,
+  onChange,
+  onRemove,
+}: FilterRowProps) {
   const op = FILTER_OPERATORS.find((o) => o.value === filter.op);
   const needsValue = op?.needsValue ?? true;
 
   return (
     <div className="flex items-center gap-1.5 px-2 h-8 border-b shrink-0">
-      <span className="text-[10px] text-muted-foreground uppercase tracking-wide w-10">where</span>
+      <span className="text-[10px] text-muted-foreground uppercase tracking-wide w-10">
+        where
+      </span>
 
-      <Select value={filter.column} onValueChange={(v) => onChange({ column: v })}>
+      <Select
+        value={filter.column}
+        onValueChange={(v) => onChange({ column: v })}
+      >
         <SelectTrigger className="h-6 text-xs border rounded px-1.5 w-auto min-w-[80px]">
           <SelectValue />
         </SelectTrigger>
@@ -47,7 +57,10 @@ export function FilterRow({ filter, schema, onChange, onRemove }: FilterRowProps
         </SelectContent>
       </Select>
 
-      <Select value={filter.op} onValueChange={(v) => onChange({ op: v as FilterCondition["op"] })}>
+      <Select
+        value={filter.op}
+        onValueChange={(v) => onChange({ op: v as FilterCondition["op"] })}
+      >
         <SelectTrigger className="h-6 text-xs border rounded px-1.5 w-auto min-w-[100px]">
           <SelectValue />
         </SelectTrigger>

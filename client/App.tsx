@@ -1,9 +1,10 @@
-import { Routes, Route } from 'react-router'
-import { Layout } from './components/layout/Layout'
-import { Setup } from './pages/Setup'
-import { TableView } from './pages/TableView'
-import { CalendarView } from './pages/CalendarView'
-import { Settings } from './pages/Settings'
+import { Route, Routes } from "react-router";
+import { Layout } from "./components/layout/Layout";
+import { CalendarView } from "./pages/CalendarView";
+import { DocumentView } from "./pages/DocumentView";
+import { Settings } from "./pages/Settings";
+import { Setup } from "./pages/Setup";
+import { TableView } from "./pages/TableView";
 
 export default function App() {
   return (
@@ -13,16 +14,17 @@ export default function App() {
         <Route index element={<Home />} />
         <Route path="table/:tableName" element={<TableView />} />
         <Route path="calendar/:tableName" element={<CalendarView />} />
+        <Route path="document/:tableName" element={<DocumentView />} />
         <Route path="settings" element={<Settings />} />
       </Route>
     </Routes>
-  )
+  );
 }
 
 function Home() {
   return (
     <div className="flex items-center justify-center h-full text-muted-foreground">
-      Select a table or calendar from the sidebar
+      Select an item from the sidebar
     </div>
-  )
+  );
 }

@@ -1,17 +1,17 @@
 import { Hono } from "hono";
-import { cors } from "hono/cors";
 import { serveStatic } from "hono/bun";
-import {
-  getDb,
-  getConfig,
-  setConfig,
-  closeDb,
-  reconnectDb,
-  isBricked,
-  brickUp,
-  copyAndBrick,
-} from "./db";
+import { cors } from "hono/cors";
 import type { FilterCondition } from "../shared/filters";
+import {
+  brickUp,
+  closeDb,
+  copyAndBrick,
+  getConfig,
+  getDb,
+  isBricked,
+  reconnectDb,
+  setConfig,
+} from "./db";
 
 const VALID_OPS = new Set([
   "=",
@@ -30,9 +30,9 @@ const VALID_OPS = new Set([
 function buildFilterWhereClause(
   filters: FilterCondition[],
   validColumns: Set<string>,
-): { clause: string; params: any[] } {
+): { clause: string; params: (string | number | boolean | null)[] } {
   const conditions: string[] = [];
-  const params: any[] = [];
+  const params: (string | number | boolean | null)[] = [];
 
   for (const f of filters) {
     if (!validColumns.has(f.column) || !VALID_OPS.has(f.op)) continue;
@@ -81,7 +81,7 @@ app.post("/api/config", async (c) => {
   }
 
   try {
-    const { existsSync } = await import("fs");
+    const { existsSync } = await import("node:fs");
     if (!existsSync(dbPath)) {
       return c.json({ error: "File does not exist" }, 400);
     }
@@ -123,7 +123,7 @@ app.post("/api/tables", async (c) => {
   }
 
   const body = await c.req.json();
-  const { name, columns: cols, type } = body;
+  const { name, columns: cols, type, title } = body;
 
   if (!name || typeof name !== "string") {
     return c.json({ error: "Table name is required" }, 400);
@@ -145,6 +145,22 @@ app.post("/api/tables", async (c) => {
       db.query(
         `CREATE TABLE '${name}' (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, start_at TEXT NOT NULL, end_at TEXT, description TEXT, color TEXT)`,
       ).run();
+      return c.json({ success: true, name }, 201);
+    } catch (e) {
+      return c.json({ error: `Create table failed: ${e}` }, 400);
+    }
+  }
+
+  if (type === "document") {
+    try {
+      db.query(
+        `CREATE TABLE '${name}' (id INTEGER PRIMARY KEY AUTOINCREMENT, position REAL NOT NULL, content TEXT NOT NULL DEFAULT '', is_title INTEGER NOT NULL DEFAULT 0, type TEXT NOT NULL DEFAULT 'paragraph', attrs TEXT)`,
+      ).run();
+      const docTitle =
+        typeof title === "string" && title.trim() ? title.trim() : "Untitled";
+      db.query(
+        `INSERT INTO '${name}' (position, content, is_title) VALUES (1.0, ?, 1)`,
+      ).run(docTitle);
       return c.json({ success: true, name }, 201);
     } catch (e) {
       return c.json({ error: `Create table failed: ${e}` }, 400);
@@ -231,8 +247,8 @@ app.get("/api/tables/:name", (c) => {
   }
 
   const tableName = c.req.param("name");
-  const limit = parseInt(c.req.query("limit") || "100");
-  const offset = parseInt(c.req.query("offset") || "0");
+  const limit = parseInt(c.req.query("limit") || "100", 10);
+  const offset = parseInt(c.req.query("offset") || "0", 10);
   const startDate = c.req.query("start_date");
   const endDate = c.req.query("end_date");
   const filtersParam = c.req.query("filters");
@@ -245,9 +261,8 @@ app.get("/api/tables/:name", (c) => {
     return c.json({ error: "Table not found" }, 404);
   }
 
-  // Build filter WHERE clause
   let filterClause = "";
-  let filterParams: any[] = [];
+  let filterParams: (string | number | boolean | null)[] = [];
   if (filtersParam) {
     try {
       const parsed = JSON.parse(filtersParam) as FilterCondition[];
@@ -263,9 +278,8 @@ app.get("/api/tables/:name", (c) => {
     }
   }
 
-  // Combine date WHERE and filter WHERE
   const whereParts: string[] = [];
-  const allParams: any[] = [];
+  const allParams: (string | number | boolean | null)[] = [];
 
   if (startDate && endDate) {
     whereParts.push("start_at < ? AND (end_at >= ? OR end_at IS NULL)");
@@ -308,7 +322,7 @@ app.post("/api/tables/:name", async (c) => {
   const values = Object.values(body) as import("bun:sqlite").SQLQueryBindings[];
 
   try {
-    let result;
+    let result: { lastInsertRowid: number | bigint };
     if (columns.length === 0) {
       result = db.query(`INSERT INTO '${tableName}' DEFAULT VALUES`).run();
     } else {
@@ -326,6 +340,144 @@ app.post("/api/tables/:name", async (c) => {
   }
 });
 
+app.put("/api/tables/:name/sync", async (c) => {
+  const db = getDb();
+  if (!db) {
+    return c.json({ error: "No database configured" }, 400);
+  }
+
+  const tableName = c.req.param("name");
+  const body = await c.req.json();
+  const { blocks } = body;
+
+  if (!Array.isArray(blocks)) {
+    return c.json({ error: "blocks array is required" }, 400);
+  }
+
+  const tableExists = db
+    .query("SELECT name FROM sqlite_master WHERE type='table' AND name = ?")
+    .get(tableName);
+
+  if (!tableExists) {
+    return c.json({ error: "Table not found" }, 404);
+  }
+
+  try {
+    const columns = db.query(`PRAGMA table_info('${tableName}')`).all() as {
+      name: string;
+      type: string;
+      pk: number;
+    }[];
+    if (!columns.some((col) => col.name === "type")) {
+      db.query(
+        `ALTER TABLE '${tableName}' ADD COLUMN type TEXT NOT NULL DEFAULT 'paragraph'`,
+      ).run();
+      db.query(`ALTER TABLE '${tableName}' ADD COLUMN attrs TEXT`).run();
+    }
+
+    const existing = db.query(`SELECT id FROM '${tableName}'`).all() as {
+      id: number;
+    }[];
+    const existingIds = new Set(existing.map((r) => r.id));
+
+    const incomingIds = new Set(
+      blocks
+        .filter((b: Record<string, unknown>) => b.id != null)
+        .map((b: Record<string, unknown>) => b.id),
+    );
+
+    for (const id of existingIds) {
+      if (!incomingIds.has(id)) {
+        db.query(`DELETE FROM '${tableName}' WHERE id = ?`).run(id);
+      }
+    }
+
+    for (const block of blocks) {
+      const attrsStr = block.attrs ? JSON.stringify(block.attrs) : null;
+      if (block.id != null && existingIds.has(block.id)) {
+        db.query(
+          `UPDATE '${tableName}' SET position = ?, content = ?, is_title = ?, type = ?, attrs = ? WHERE id = ?`,
+        ).run(
+          block.position,
+          block.content,
+          block.is_title ? 1 : 0,
+          block.type || "paragraph",
+          attrsStr,
+          block.id,
+        );
+      } else {
+        db.query(
+          `INSERT INTO '${tableName}' (position, content, is_title, type, attrs) VALUES (?, ?, ?, ?, ?)`,
+        ).run(
+          block.position,
+          block.content,
+          block.is_title ? 1 : 0,
+          block.type || "paragraph",
+          attrsStr,
+        );
+      }
+    }
+
+    const rows = db
+      .query(`SELECT * FROM '${tableName}' ORDER BY position`)
+      .all();
+    return c.json({ rows });
+  } catch (e) {
+    return c.json({ error: `Sync failed: ${e}` }, 400);
+  }
+});
+
+app.put("/api/tables/:name/rename", async (c) => {
+  const db = getDb();
+  if (!db) {
+    return c.json({ error: "No database configured" }, 400);
+  }
+
+  const oldName = c.req.param("name");
+  const body = await c.req.json();
+  const { newName } = body;
+
+  if (!newName || typeof newName !== "string") {
+    return c.json({ error: "newName is required" }, 400);
+  }
+
+  if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(newName)) {
+    return c.json(
+      { error: "Table name must be alphanumeric (plus underscores)" },
+      400,
+    );
+  }
+
+  if (newName === oldName) {
+    return c.json({ success: true, name: newName });
+  }
+
+  const conflict = db
+    .query("SELECT name FROM sqlite_master WHERE type='table' AND name = ?")
+    .get(newName);
+
+  if (conflict) {
+    return c.json({ error: "A table with that name already exists" }, 409);
+  }
+
+  try {
+    db.query(`ALTER TABLE '${oldName}' RENAME TO '${newName}'`).run();
+
+    try {
+      db.query("UPDATE _brick_preferences SET scope = ? WHERE scope = ?").run(
+        newName,
+        oldName,
+      );
+    } catch {
+      // preferences table may not exist
+    }
+
+    return c.json({ success: true, name: newName });
+  } catch (e) {
+    return c.json({ error: `Rename failed: ${e}` }, 400);
+  }
+});
+
 app.put("/api/tables/:name/:id", async (c) => {
   const db = getDb();
   if (!db) {
@@ -336,7 +488,11 @@ app.put("/api/tables/:name/:id", async (c) => {
   const id = c.req.param("id");
   const body = await c.req.json();
 
-  const columns = db.query(`PRAGMA table_info('${tableName}')`).all() as any[];
+  const columns = db.query(`PRAGMA table_info('${tableName}')`).all() as {
+    name: string;
+    type: string;
+    pk: number;
+  }[];
   const pkColumn = columns.find((col) => col.pk === 1)?.name || "id";
 
   const setClauses = Object.keys(body)
@@ -369,7 +525,11 @@ app.delete("/api/tables/:name/:id", (c) => {
   const tableName = c.req.param("name");
   const id = c.req.param("id");
 
-  const columns = db.query(`PRAGMA table_info('${tableName}')`).all() as any[];
+  const columns = db.query(`PRAGMA table_info('${tableName}')`).all() as {
+    name: string;
+    type: string;
+    pk: number;
+  }[];
   const pkColumn = columns.find((col) => col.pk === 1)?.name || "id";
 
   try {
@@ -435,14 +595,14 @@ app.get("/api/brick/preferences", (c) => {
   }
 
   const scope = c.req.query("scope");
-  let rows;
-  if (scope !== undefined) {
-    rows = db
-      .query("SELECT key, scope, value FROM _brick_preferences WHERE scope = ?")
-      .all(scope);
-  } else {
-    rows = db.query("SELECT key, scope, value FROM _brick_preferences").all();
-  }
+  const rows =
+    scope !== undefined
+      ? db
+          .query(
+            "SELECT key, scope, value FROM _brick_preferences WHERE scope = ?",
+          )
+          .all(scope)
+      : db.query("SELECT key, scope, value FROM _brick_preferences").all();
   return c.json({ preferences: rows });
 });
 

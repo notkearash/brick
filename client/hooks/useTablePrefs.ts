@@ -1,19 +1,43 @@
 import { useCallback, useEffect, useState } from "react";
 
 export type TableColor = "none" | "orange" | "purple" | "cyan";
-export type TableIcon = "table" | "grid" | "list" | "people" | "calendar" | "calendar-days" | "calendar-check" | "calendar-clock";
+export type TableIcon =
+  | "table"
+  | "grid"
+  | "list"
+  | "people"
+  | "calendar"
+  | "calendar-days"
+  | "calendar-check"
+  | "calendar-clock"
+  | "file-text";
 
-export type ViewType = "table" | "calendar";
+export type ViewType = "table" | "calendar" | "document";
+
+const VIEW_ROUTES: Record<ViewType, string> = {
+  table: "/table",
+  calendar: "/calendar",
+  document: "/document",
+};
+
+export function getViewRoute(viewType?: ViewType): string {
+  return VIEW_ROUTES[viewType ?? "table"] ?? "/table";
+}
 
 export interface TablePref {
   color?: TableColor;
   icon?: TableIcon;
   viewType?: ViewType;
+  displayName?: string;
 }
 
 type TablePrefs = Record<string, TablePref>;
 
-const DEFAULTS: Record<string, string> = { color: "none", icon: "table", view_type: "table" };
+const DEFAULTS: Record<string, string> = {
+  color: "none",
+  icon: "table",
+  view_type: "table",
+};
 
 export function useTablePrefs(bricked: boolean | null) {
   const [prefs, setPrefs] = useState<TablePrefs>({});
@@ -36,7 +60,9 @@ export function useTablePrefs(bricked: boolean | null) {
           value: string;
         }[]) {
           if (row.key === "table_order" && !row.scope) {
-            try { setTableOrderState(JSON.parse(row.value)); } catch {}
+            try {
+              setTableOrderState(JSON.parse(row.value));
+            } catch {}
             continue;
           }
           if (!row.scope) continue;
@@ -45,13 +71,20 @@ export function useTablePrefs(bricked: boolean | null) {
             map[row.scope].viewType = row.value as ViewType;
             continue;
           }
+          if (row.key === "display_name") {
+            if (!map[row.scope]) map[row.scope] = {};
+            map[row.scope].displayName = row.value;
+            continue;
+          }
           if (row.key !== "color" && row.key !== "icon") continue;
           if (!map[row.scope]) map[row.scope] = {};
-          (map[row.scope] as any)[row.key] = row.value;
+          (map[row.scope] as Record<string, string>)[row.key] = row.value;
         }
         setPrefs(map);
       })
-      .catch(() => { setPrefs({}); });
+      .catch(() => {
+        setPrefs({});
+      });
   }, [bricked]);
 
   useEffect(() => {
@@ -75,7 +108,10 @@ export function useTablePrefs(bricked: boolean | null) {
         return next;
       });
 
-      const KEY_MAP: Record<string, string> = { viewType: "view_type" };
+      const KEY_MAP: Record<string, string> = {
+        viewType: "view_type",
+        displayName: "display_name",
+      };
       for (const [key, value] of Object.entries(update)) {
         const apiKey = KEY_MAP[key] || key;
         if (value === DEFAULTS[apiKey]) {
@@ -96,17 +132,17 @@ export function useTablePrefs(bricked: boolean | null) {
     [],
   );
 
-  const setTableOrder = useCallback(
-    (order: string[]) => {
-      setTableOrderState(order);
-      fetch("/api/brick/preferences", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: "table_order", value: JSON.stringify(order) }),
-      });
-    },
-    [],
-  );
+  const setTableOrder = useCallback((order: string[]) => {
+    setTableOrderState(order);
+    fetch("/api/brick/preferences", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        key: "table_order",
+        value: JSON.stringify(order),
+      }),
+    });
+  }, []);
 
-  return { prefs, setPref, tableOrder, setTableOrder };
+  return { prefs, setPref, tableOrder, setTableOrder, refresh: load };
 }

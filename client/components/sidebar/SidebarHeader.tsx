@@ -1,11 +1,11 @@
-import { Folder, Copy, DatabaseZap, ToyBrick } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Copy, DatabaseZap, Folder, ToyBrick } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
 interface SidebarHeaderProps {
   dbPath: string | null;
@@ -33,6 +33,7 @@ export function SidebarHeader({
       >
         <DropdownMenuTrigger asChild>
           <button
+            type="button"
             className="group flex items-center justify-between w-full h-full cursor-pointer px-3 focus:outline-none"
             title={dbPath ?? undefined}
           >

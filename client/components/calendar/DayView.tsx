@@ -1,15 +1,15 @@
 import {
   eachHourOfInterval,
   format,
+  isSameDay,
   isToday,
   parseISO,
-  startOfDay,
   setHours,
-  isSameDay,
+  startOfDay,
 } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { CalendarEvent } from ".";
-import { getEventClasses, isAllDay, HOUR_HEIGHT } from ".";
+import { getEventClasses, HOUR_HEIGHT, isAllDay } from ".";
 
 interface DayViewProps {
   currentDate: Date;
@@ -44,6 +44,7 @@ export function DayView({
             <div className="border-l p-0.5 space-y-0.5">
               {allDayEvents.map((event) => (
                 <button
+                  type="button"
                   key={event.id}
                   className={cn(
                     "w-full text-left text-[10px] leading-tight px-1 py-0.5 rounded truncate cursor-pointer",
@@ -106,9 +107,10 @@ export function DayView({
             style={{ gridRow: "1 / -1" }}
           >
             {hours.map((hour) => (
-              <div
+              <button
+                type="button"
                 key={hour.toISOString()}
-                className="border-b border-border/50 cursor-pointer hover:bg-muted/30"
+                className="block w-full border-b border-border/50 cursor-pointer hover:bg-muted/30"
                 style={{ height: HOUR_HEIGHT }}
                 onClick={() => {
                   const d = new Date(currentDate);
@@ -146,9 +148,10 @@ export function DayView({
 
               return (
                 <button
+                  type="button"
                   key={event.id}
                   className={cn(
-                    "absolute left-1 right-1 rounded px-2 py-1 text-xs leading-tight overflow-hidden cursor-pointer z-[5]",
+                    "absolute left-1 right-1 rounded px-2 py-1 text-xs leading-tight overflow-hidden cursor-pointer z-5",
                     getEventClasses(event.color),
                   )}
                   style={{ top, height }}
