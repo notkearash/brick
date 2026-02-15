@@ -1,6 +1,11 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
 interface CreateCalendarFormProps {
@@ -11,7 +16,13 @@ interface CreateCalendarFormProps {
   backLabel: string;
 }
 
-export function CreateCalendarForm({ loading, error, onSubmit, onBack, backLabel }: CreateCalendarFormProps) {
+export function CreateCalendarForm({
+  loading,
+  error,
+  onSubmit,
+  onBack,
+  backLabel,
+}: CreateCalendarFormProps) {
   const [name, setName] = useState("");
 
   return (
@@ -21,8 +32,14 @@ export function CreateCalendarForm({ loading, error, onSubmit, onBack, backLabel
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
-          <label className="text-sm text-muted-foreground">Calendar name</label>
+          <label
+            htmlFor="calendarName"
+            className="text-sm text-muted-foreground"
+          >
+            Calendar name
+          </label>
           <Input
+            name="calendarName"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="my_calendar"

@@ -1,5 +1,10 @@
 import { Button } from "@/components/ui/button";
-import { CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 interface CreateDocumentFormProps {
   loading: boolean;
@@ -9,7 +14,13 @@ interface CreateDocumentFormProps {
   backLabel: string;
 }
 
-export function CreateDocumentForm({ loading, error, onSubmit, onBack, backLabel }: CreateDocumentFormProps) {
+export function CreateDocumentForm({
+  loading,
+  error,
+  onSubmit,
+  onBack,
+  backLabel,
+}: CreateDocumentFormProps) {
   return (
     <>
       <CardHeader>

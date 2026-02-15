@@ -1,14 +1,19 @@
-import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Calendar, FileText, Table2 } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table2, Calendar, FileText } from "lucide-react";
-import { DialogShell } from ".";
+import {
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import type { ViewType } from "@/hooks/useTablePrefs";
 import { cn } from "@/lib/utils";
-import { CreateTableForm } from "./CreateTableForm";
+import { DialogShell } from ".";
 import { CreateCalendarForm } from "./CreateCalendarForm";
 import { CreateDocumentForm } from "./CreateDocumentForm";
+import { CreateTableForm } from "./CreateTableForm";
 
 interface CreateTableDialogProps {
   onClose: () => void;
@@ -88,12 +93,28 @@ export function CreateTableDialog({
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-3 gap-3">
-            {([
-              { type: "table" as const, icon: Table2, label: "Table", desc: "Custom columns, data grid" },
-              { type: "calendar" as const, icon: Calendar, label: "Calendar", desc: "Events with dates" },
-              { type: "document" as const, icon: FileText, label: "Document", desc: "Rich text notes" },
-            ]).map(({ type, icon: Icon, label, desc }) => (
+            {[
+              {
+                type: "table" as const,
+                icon: Table2,
+                label: "Table",
+                desc: "Custom columns, data grid",
+              },
+              {
+                type: "calendar" as const,
+                icon: Calendar,
+                label: "Calendar",
+                desc: "Events with dates",
+              },
+              {
+                type: "document" as const,
+                icon: FileText,
+                label: "Document",
+                desc: "Rich text notes",
+              },
+            ].map(({ type, icon: Icon, label, desc }) => (
               <button
+                type="button"
                 key={type}
                 className={cn(
                   "flex flex-col items-center gap-2 rounded-md border p-4 text-sm font-medium transition-colors",
@@ -104,7 +125,9 @@ export function CreateTableDialog({
                 <Icon className="h-6 w-6 text-muted-foreground" />
                 <div className="text-center">
                   <div>{label}</div>
-                  <div className="text-xs text-muted-foreground font-normal">{desc}</div>
+                  <div className="text-xs text-muted-foreground font-normal">
+                    {desc}
+                  </div>
                 </div>
               </button>
             ))}
@@ -142,7 +165,10 @@ export function CreateTableDialog({
           onSubmit={async (name) => {
             await mutation.mutateAsync({
               body: { name, type: "calendar" },
-              prefs: { scope: name, values: { view_type: "calendar", icon: "calendar" } },
+              prefs: {
+                scope: name,
+                values: { view_type: "calendar", icon: "calendar" },
+              },
             });
             onCreated(name, "calendar");
           }}
@@ -160,7 +186,11 @@ export function CreateTableDialog({
               body: { name: docName, type: "document" },
               prefs: {
                 scope: docName,
-                values: { view_type: "document", icon: "file-text", display_name: "Untitled" },
+                values: {
+                  view_type: "document",
+                  icon: "file-text",
+                  display_name: "Untitled",
+                },
               },
             });
             onCreated(docName, "document");

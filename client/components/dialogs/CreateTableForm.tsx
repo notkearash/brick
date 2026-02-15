@@ -1,8 +1,13 @@
+import { Check, Plus, X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Plus, X } from "lucide-react";
 
 interface ColumnDef {
   name: string;
@@ -12,14 +17,23 @@ interface ColumnDef {
 interface CreateTableFormProps {
   loading: boolean;
   error: string | null;
-  onSubmit: (name: string, columns: { name: string; type: string; pk?: boolean }[]) => void;
+  onSubmit: (
+    name: string,
+    columns: { name: string; type: string; pk?: boolean }[],
+  ) => void;
   onBack: () => void;
   backLabel: string;
 }
 
 const TYPES = ["TEXT", "INTEGER", "REAL", "BLOB"];
 
-export function CreateTableForm({ loading, error, onSubmit, onBack, backLabel }: CreateTableFormProps) {
+export function CreateTableForm({
+  loading,
+  error,
+  onSubmit,
+  onBack,
+  backLabel,
+}: CreateTableFormProps) {
   const [name, setName] = useState("");
   const [autoId, setAutoId] = useState(true);
   const [cols, setCols] = useState<ColumnDef[]>([{ name: "", type: "TEXT" }]);
@@ -51,8 +65,11 @@ export function CreateTableForm({ loading, error, onSubmit, onBack, backLabel }:
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
-          <label className="text-sm text-muted-foreground">Table name</label>
+          <label htmlFor="tableName" className="text-sm text-muted-foreground">
+            Table name
+          </label>
           <Input
+            id="tableName"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="my_table"
@@ -66,8 +83,19 @@ export function CreateTableForm({ loading, error, onSubmit, onBack, backLabel }:
 
         <label
           className="flex items-center gap-2 text-sm cursor-pointer"
-          onClick={() => setAutoId((v) => !v)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setAutoId((v) => !v);
+            }
+          }}
         >
+          <input
+            type="checkbox"
+            checked={autoId}
+            onChange={() => setAutoId((v) => !v)}
+            className="sr-only"
+          />
           <span
             className={`h-4 w-4 border flex items-center justify-center shrink-0 ${
               autoId
@@ -75,16 +103,7 @@ export function CreateTableForm({ loading, error, onSubmit, onBack, backLabel }:
                 : "border-muted-foreground/40"
             }`}
           >
-            {autoId && (
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                <path
-                  d="M2 5l2.5 2.5L8 3"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="square"
-                />
-              </svg>
-            )}
+            {autoId && <Check className="h-2.5 w-2.5" />}
           </span>
           Auto-add{" "}
           <code className="text-xs bg-muted px-1 rounded">
@@ -93,15 +112,18 @@ export function CreateTableForm({ loading, error, onSubmit, onBack, backLabel }:
         </label>
 
         <div>
-          <label className="text-sm text-muted-foreground">Columns</label>
+          <span className="text-sm text-muted-foreground">Columns</span>
           <div className="space-y-2 mt-1">
             {cols.map((col, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: columns have no stable id
               <div key={i} className="flex items-center gap-2">
                 <Input
                   value={col.name}
                   onChange={(e) =>
                     setCols((c) =>
-                      c.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)),
+                      c.map((x, j) =>
+                        j === i ? { ...x, name: e.target.value } : x,
+                      ),
                     )
                   }
                   placeholder="column_name"
@@ -114,7 +136,9 @@ export function CreateTableForm({ loading, error, onSubmit, onBack, backLabel }:
                   value={col.type}
                   onChange={(e) =>
                     setCols((c) =>
-                      c.map((x, j) => (j === i ? { ...x, type: e.target.value } : x)),
+                      c.map((x, j) =>
+                        j === i ? { ...x, type: e.target.value } : x,
+                      ),
                     )
                   }
                   className="h-8 bg-background border rounded px-2 text-sm cursor-pointer"
