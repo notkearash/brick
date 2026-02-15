@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   CardContent,
@@ -27,13 +28,48 @@ type ItemType = "table" | "calendar" | "document";
 
 const TYPES = ["TEXT", "INTEGER", "REAL", "BLOB"];
 
+async function createTable(body: Record<string, unknown>) {
+  const res = await fetch("/api/tables", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Failed");
+  return data;
+}
+
+async function setPreferences(scope: string, prefs: Record<string, string>) {
+  await Promise.all(
+    Object.entries(prefs).map(([key, value]) =>
+      fetch("/api/brick/preferences", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key, scope, value }),
+      }),
+    ),
+  );
+}
+
 export function CreateTableDialog({ onClose, onCreated, bricked }: CreateTableDialogProps) {
   const [itemType, setItemType] = useState<ItemType | null>(bricked ? null : "table");
   const [name, setName] = useState("");
   const [autoId, setAutoId] = useState(true);
   const [cols, setCols] = useState<ColumnDef[]>([{ name: "", type: "TEXT" }]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+
+  const createTableMutation = useMutation({
+    mutationFn: async ({ body, prefs }: { body: Record<string, unknown>; prefs?: { scope: string; values: Record<string, string> } }) => {
+      await createTable(body);
+      if (prefs) await setPreferences(prefs.scope, prefs.values);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tables"] });
+    },
+  });
+
+  const loading = createTableMutation.isPending;
+  const error = createTableMutation.error?.message ?? null;
 
   function addColumn() {
     setCols((c) => [...c, { name: "", type: "TEXT" }]);
@@ -63,97 +99,38 @@ export function CreateTableDialog({ onClose, onCreated, bricked }: CreateTableDi
       }
     }
 
-    if (columns.length === 0) {
-      setError("At least one column is required");
-      return;
-    }
+    if (columns.length === 0) return;
 
-    setLoading(true);
-    setError(null);
-
-    try {
-      const res = await fetch("/api/tables", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: trimmedName, columns }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed");
-      onCreated(trimmedName, "table");
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function setPreferences(scope: string, prefs: Record<string, string>) {
-    await Promise.all(
-      Object.entries(prefs).map(([key, value]) =>
-        fetch("/api/brick/preferences", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ key, scope, value }),
-        }),
-      ),
-    );
+    await createTableMutation.mutateAsync({
+      body: { name: trimmedName, columns },
+    });
+    onCreated(trimmedName, "table");
   }
 
   async function handleSubmitDocument() {
-    setLoading(true);
-    setError(null);
-
     const docName = `doc_${Date.now()}`;
-    try {
-      const res = await fetch("/api/tables", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: docName, type: "document" }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed");
-
-      await setPreferences(docName, {
-        view_type: "document",
-        icon: "file-text",
-        display_name: "Untitled",
-      });
-
-      onCreated(docName, "document");
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
+    await createTableMutation.mutateAsync({
+      body: { name: docName, type: "document" },
+      prefs: {
+        scope: docName,
+        values: { view_type: "document", icon: "file-text", display_name: "Untitled" },
+      },
+    });
+    onCreated(docName, "document");
   }
 
   async function handleSubmitCalendar() {
     const trimmedName = name.trim();
     if (!trimmedName) return;
 
-    setLoading(true);
-    setError(null);
-
-    try {
-      const res = await fetch("/api/tables", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: trimmedName, type: "calendar" }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed");
-
-      await setPreferences(trimmedName, {
-        view_type: "calendar",
-        icon: "calendar",
-      });
-
-      onCreated(trimmedName, "calendar");
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
+    await createTableMutation.mutateAsync({
+      body: { name: trimmedName, type: "calendar" },
+      prefs: {
+        scope: trimmedName,
+        values: { view_type: "calendar", icon: "calendar" },
+      },
+    });
+    onCreated(trimmedName, "calendar");
   }
 
   if (itemType === null) {
@@ -233,7 +210,7 @@ export function CreateTableDialog({ onClose, onCreated, bricked }: CreateTableDi
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => { setItemType(bricked ? null : "table"); setError(null); }}
+              onClick={() => { setItemType(bricked ? null : "table"); createTableMutation.reset(); }}
               disabled={loading}
             >
               {bricked ? "Back" : "Cancel"}
@@ -280,7 +257,7 @@ export function CreateTableDialog({ onClose, onCreated, bricked }: CreateTableDi
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => { setItemType(bricked ? null : "table"); setError(null); }}
+              onClick={() => { setItemType(bricked ? null : "table"); createTableMutation.reset(); }}
               disabled={loading}
             >
               {bricked ? "Back" : "Cancel"}
@@ -388,7 +365,7 @@ export function CreateTableDialog({ onClose, onCreated, bricked }: CreateTableDi
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => { if (bricked) { setItemType(null); setError(null); } else { onClose(); } }}
+            onClick={() => { if (bricked) { setItemType(null); createTableMutation.reset(); } else { onClose(); } }}
             disabled={loading}
           >
             {bricked ? "Back" : "Cancel"}
