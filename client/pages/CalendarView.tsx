@@ -1,30 +1,30 @@
-import { useState, useMemo, useEffect } from "react";
-import { useParams, useOutletContext } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  startOfMonth,
-  endOfMonth,
-  startOfWeek,
-  endOfWeek,
-  startOfDay,
-  endOfDay,
-  addMonths,
-  subMonths,
-  addWeeks,
-  subWeeks,
   addDays,
-  subDays,
+  addMonths,
+  addWeeks,
+  endOfDay,
+  endOfMonth,
+  endOfWeek,
   format,
+  startOfDay,
+  startOfMonth,
+  startOfWeek,
+  subDays,
+  subMonths,
+  subWeeks,
 } from "date-fns";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useOutletContext, useParams } from "react-router";
 import type { CalendarEvent } from "@/components/calendar";
 import {
   CalendarToolbar,
   type CalendarViewMode,
 } from "@/components/calendar/CalendarToolbar";
-import { MonthView } from "@/components/calendar/MonthView";
-import { WeekView } from "@/components/calendar/WeekView";
 import { DayView } from "@/components/calendar/DayView";
 import { EventDialog } from "@/components/calendar/EventDialog";
+import { MonthView } from "@/components/calendar/MonthView";
+import { WeekView } from "@/components/calendar/WeekView";
 import type { LayoutContext } from "@/components/layout/Layout";
 
 export function CalendarView() {
@@ -42,7 +42,7 @@ export function CalendarView() {
   const [createDate, setCreateDate] = useState<Date | null>(null);
 
   useEffect(() => {
-    setCurrentDate(new Date());
+    if (tableName) setCurrentDate(new Date());
   }, [tableName]);
 
   const { startDate, endDate } = useMemo(() => {
@@ -84,24 +84,26 @@ export function CalendarView() {
 
   const events = data ?? [];
 
-  const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: ["calendar", tableName] });
+  const invalidate = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: ["calendar", tableName] }),
+    [queryClient, tableName],
+  );
 
-  function handlePrev() {
+  const handlePrev = useCallback(() => {
     if (viewMode === "month") setCurrentDate((d) => subMonths(d, 1));
     else if (viewMode === "week") setCurrentDate((d) => subWeeks(d, 1));
     else setCurrentDate((d) => subDays(d, 1));
-  }
+  }, [viewMode]);
 
-  function handleNext() {
+  const handleNext = useCallback(() => {
     if (viewMode === "month") setCurrentDate((d) => addMonths(d, 1));
     else if (viewMode === "week") setCurrentDate((d) => addWeeks(d, 1));
     else setCurrentDate((d) => addDays(d, 1));
-  }
+  }, [viewMode]);
 
-  function handleToday() {
+  const handleToday = useCallback(() => {
     setCurrentDate(new Date());
-  }
+  }, []);
 
   function handleDateClick(date: Date) {
     if (editMode) {
@@ -158,7 +160,7 @@ export function CalendarView() {
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [viewMode, currentDate]);
+  }, [invalidate, handlePrev, handleNext, handleToday]);
 
   if (isLoading) {
     return (

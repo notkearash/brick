@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
-import { useParams, useOutletContext } from "react-router";
-import { ColumnDef, PaginationState } from "@tanstack/react-table";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { DataTable } from "@/components/data-table/DataTable";
 import type { FilterCondition } from "@shared/filters";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import type { ColumnDef, PaginationState } from "@tanstack/react-table";
+import { useEffect, useState } from "react";
+import { useOutletContext, useParams } from "react-router";
+import { DataTable } from "@/components/data-table/DataTable";
 import type { LayoutContext } from "@/components/layout/Layout";
 
 function CellContent({ value }: { value: unknown }) {
@@ -24,12 +24,12 @@ function CellContent({ value }: { value: unknown }) {
       onClick={() => setExpanded((e) => !e)}
       className={
         expanded
-          ? "text-left whitespace-pre-wrap break-words max-w-md"
-          : "text-left truncate block max-w-[200px] cursor-pointer hover:text-foreground/80"
+          ? "text-left whitespace-pre-wrap wrap-break-words max-w-md"
+          : "text-left truncate block max-w-50 cursor-pointer hover:text-foreground/80"
       }
       title={expanded ? "Click to collapse" : "Click to expand"}
     >
-      {expanded ? str : str.slice(0, 60) + "…"}
+      {expanded ? str : `${str.slice(0, 60)}…`}
     </button>
   );
 }
@@ -52,7 +52,8 @@ interface TableData {
 
 export function TableView() {
   const { tableName } = useParams<{ tableName: string }>();
-  const { collapsed, setCollapsed, editMode } = useOutletContext<LayoutContext>();
+  const { collapsed, setCollapsed, editMode } =
+    useOutletContext<LayoutContext>();
   const queryClient = useQueryClient();
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
@@ -61,26 +62,42 @@ export function TableView() {
   const [filters, setFilters] = useState<FilterCondition[]>([]);
 
   useEffect(() => {
-    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-    setFilters([]);
+    if (tableName) {
+      setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+      setFilters([]);
+    }
   }, [tableName]);
 
   useEffect(() => {
-    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+    if (filters) {
+      setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+    }
   }, [filters]);
 
   const { data: schemaResult } = useQuery({
     queryKey: ["table-schema", tableName],
     queryFn: async () => {
-      const res = await fetch(`/api/tables/${tableName}/schema`).then((r) => r.json());
+      const res = await fetch(`/api/tables/${tableName}/schema`).then((r) =>
+        r.json(),
+      );
       if (res.error) throw new Error(res.error);
       return res.columns as SchemaColumn[];
     },
     enabled: !!tableName,
   });
 
-  const { data: tableResult, isLoading, error } = useQuery({
-    queryKey: ["table", tableName, pagination.pageIndex, pagination.pageSize, JSON.stringify(filters)],
+  const {
+    data: tableResult,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: [
+      "table",
+      tableName,
+      pagination.pageIndex,
+      pagination.pageSize,
+      JSON.stringify(filters),
+    ],
     queryFn: async () => {
       const params = new URLSearchParams({
         limit: String(pagination.pageSize),
@@ -89,7 +106,9 @@ export function TableView() {
       if (filters.length > 0) {
         params.set("filters", JSON.stringify(filters));
       }
-      return fetch(`/api/tables/${tableName}?${params}`).then((r) => r.json()) as Promise<TableData>;
+      return fetch(`/api/tables/${tableName}?${params}`).then((r) =>
+        r.json(),
+      ) as Promise<TableData>;
     },
     enabled: !!tableName,
     placeholderData: (prev) => prev,
@@ -98,7 +117,8 @@ export function TableView() {
   const schema = schemaResult ?? [];
   const data = tableResult ?? null;
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["table", tableName] });
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: ["table", tableName] });
 
   if (isLoading) {
     return (
@@ -152,11 +172,13 @@ export function TableView() {
       onDeleteRows={
         pkColumn
           ? async (rows) => {
-              const ids = rows.map((r) => (r as Record<string, unknown>)[pkColumn!]);
+              const ids = rows.map(
+                (r) => (r as Record<string, unknown>)[pkColumn],
+              );
               await Promise.all(
                 ids.map((id) =>
-                  fetch(`/api/tables/${tableName}/${id}`, { method: "DELETE" })
-                )
+                  fetch(`/api/tables/${tableName}/${id}`, { method: "DELETE" }),
+                ),
               );
               invalidate();
             }

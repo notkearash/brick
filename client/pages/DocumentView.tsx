@@ -1,10 +1,10 @@
-import { useMemo, useEffect } from "react";
-import { useParams, useOutletContext } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { useEffect, useMemo } from "react";
+import { useOutletContext, useParams } from "react-router";
 import { TipTapEditor } from "@/components/document/TipTapEditor";
-import { useDocumentEditor, type DocRow } from "@/hooks/useDocumentEditor";
 import type { LayoutContext } from "@/components/layout/Layout";
+import { type DocRow, useDocumentEditor } from "@/hooks/useDocumentEditor";
 
 function bodyRowsToHtml(rows: DocRow[]): string {
   const body = rows
@@ -61,6 +61,7 @@ export function DocumentView() {
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-2 px-2 border-b h-10 shrink-0">
         <button
+          type="button"
           className="p-1 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
           onClick={() => setCollapsed((c: boolean) => !c)}
         >

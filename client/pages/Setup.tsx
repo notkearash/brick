@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { useNavigate } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { open } from "@tauri-apps/plugin-dialog";
+import { Folder, X } from "lucide-react";
+import { useState } from "react";
+import { useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -10,7 +11,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Folder, X } from "lucide-react";
 
 const RECENTS_KEY = "brick-recent-dbs";
 const MAX_RECENTS = 3;
@@ -27,7 +27,10 @@ function getRecents(): string[] {
 function addRecent(path: string) {
   const recents = getRecents().filter((p) => p !== path);
   recents.unshift(path);
-  localStorage.setItem(RECENTS_KEY, JSON.stringify(recents.slice(0, MAX_RECENTS)));
+  localStorage.setItem(
+    RECENTS_KEY,
+    JSON.stringify(recents.slice(0, MAX_RECENTS)),
+  );
 }
 
 function removeRecent(path: string) {
@@ -112,6 +115,7 @@ export function Setup() {
               {recents.map((path) => (
                 <div key={path} className="flex items-center gap-1">
                   <button
+                    type="button"
                     onClick={() => openDb(path)}
                     disabled={loading}
                     className="flex-1 flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors rounded-md px-2 py-1.5 hover:ring-1 hover:ring-ring cursor-pointer truncate text-left"
@@ -121,6 +125,7 @@ export function Setup() {
                     <span className="truncate">../{path.split("/").pop()}</span>
                   </button>
                   <button
+                    type="button"
                     onClick={() => handleRemove(path)}
                     className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-md hover:ring-1 hover:ring-ring cursor-pointer shrink-0"
                     title="Remove from recents"
