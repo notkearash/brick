@@ -1,6 +1,6 @@
-import { useEditor, EditorContent, type Editor } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
+import { type Editor, EditorContent, useEditor } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
 import { useEffect, useRef } from "react";
 
 interface TipTapEditorProps {
@@ -31,7 +31,7 @@ export function TipTapEditor({ initialContent, onUpdate }: TipTapEditorProps) {
     if (editor && initialContent && !editor.isFocused) {
       editor.commands.setContent(initialContent);
     }
-  }, [initialContent]);
+  }, [initialContent, editor]);
 
   if (!editor) return null;
 
