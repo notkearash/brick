@@ -225,6 +225,8 @@ export function Layout() {
       {deleteTable && (
         <DeleteTableDialog
           tableName={deleteTable}
+          displayName={tablePrefs?.[deleteTable]?.displayName}
+          skipConfirm={tablePrefs?.[deleteTable]?.viewType === "document"}
           onClose={() => setDeleteTable(null)}
           onDeleted={() => {
             setDeleteTable(null);
