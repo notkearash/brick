@@ -30,6 +30,7 @@ export function DocumentView() {
       return json.rows as DocRow[];
     },
     enabled: !!tableName,
+    placeholderData: (prev) => prev,
   });
 
   useEffect(() => {
