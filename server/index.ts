@@ -123,7 +123,7 @@ app.post("/api/tables", async (c) => {
   }
 
   const body = await c.req.json();
-  const { name, columns: cols, type } = body;
+  const { name, columns: cols, type, title } = body;
 
   if (!name || typeof name !== "string") {
     return c.json({ error: "Table name is required" }, 400);
@@ -156,9 +156,11 @@ app.post("/api/tables", async (c) => {
       db.query(
         `CREATE TABLE '${name}' (id INTEGER PRIMARY KEY AUTOINCREMENT, position REAL NOT NULL, content TEXT NOT NULL DEFAULT '', is_title INTEGER NOT NULL DEFAULT 0, type TEXT NOT NULL DEFAULT 'paragraph', attrs TEXT)`,
       ).run();
+      const docTitle =
+        typeof title === "string" && title.trim() ? title.trim() : "Untitled";
       db.query(
-        `INSERT INTO '${name}' (position, content, is_title) VALUES (1.0, 'Untitled', 1)`,
-      ).run();
+        `INSERT INTO '${name}' (position, content, is_title) VALUES (1.0, ?, 1)`,
+      ).run(docTitle);
       return c.json({ success: true, name }, 201);
     } catch (e) {
       return c.json({ error: `Create table failed: ${e}` }, 400);
