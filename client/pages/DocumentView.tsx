@@ -16,6 +16,10 @@ function bodyRowsToHtml(rows: DocRow[]): string {
 
 export function DocumentView() {
   const { tableName } = useParams<{ tableName: string }>();
+  return <DocumentViewInner key={tableName} tableName={tableName} />;
+}
+
+function DocumentViewInner({ tableName }: { tableName: string | undefined }) {
   const { collapsed, setCollapsed } = useOutletContext<LayoutContext>();
 
   const { status, title, onTitleChange, onEditorUpdate, initFromRows } =
@@ -30,7 +34,7 @@ export function DocumentView() {
       return json.rows as DocRow[];
     },
     enabled: !!tableName,
-    placeholderData: (prev) => prev,
+    staleTime: 0,
   });
 
   useEffect(() => {
