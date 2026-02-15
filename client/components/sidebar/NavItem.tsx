@@ -1,17 +1,18 @@
-import { NavLink } from "react-router";
 import { GripVertical } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { NavLink } from "react-router";
+import { ContextMenu, ContextMenuTrigger } from "@/components/ui/context-menu";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  ContextMenu,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu";
-import { getViewRoute, type TablePref, type ViewType } from "@/hooks/useTablePrefs";
-import { getTableIcon, COLOR_CLASSES } from ".";
+  getViewRoute,
+  type TablePref,
+  type ViewType,
+} from "@/hooks/useTablePrefs";
+import { cn } from "@/lib/utils";
+import { COLOR_CLASSES, getTableIcon } from ".";
 import { NavItemContextMenu } from "./NavItemContextMenu";
 
 export interface NavItemProps {
@@ -25,7 +26,7 @@ export interface NavItemProps {
   onSetPref: (update: Partial<TablePref>) => void;
   onDeleteTable: () => void;
   dragHandleRef?: (element: HTMLElement | null) => void;
-  dragHandleListeners?: Record<string, any>;
+  dragHandleListeners?: Record<string, unknown>;
 }
 
 export function NavItem({
@@ -106,7 +107,9 @@ export function NavItem({
             {gripHandle}
           </div>
         </TooltipTrigger>
-        <TooltipContent side="right">{pref.displayName || table}</TooltipContent>
+        <TooltipContent side="right">
+          {pref.displayName || table}
+        </TooltipContent>
       </Tooltip>
     );
   }
@@ -122,7 +125,9 @@ export function NavItem({
             </div>
           </TooltipTrigger>
         </ContextMenuTrigger>
-        <TooltipContent side="right">{pref.displayName || table}</TooltipContent>
+        <TooltipContent side="right">
+          {pref.displayName || table}
+        </TooltipContent>
       </Tooltip>
       <NavItemContextMenu
         bricked={bricked}

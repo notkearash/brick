@@ -1,5 +1,5 @@
+import { Lock, Pencil, Settings } from "lucide-react";
 import { NavLink } from "react-router";
-import { Settings, Lock, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SidebarFooterProps {
@@ -16,6 +16,7 @@ export function SidebarFooter({
   return (
     <div className="border-t p-2 space-y-1">
       <button
+        type="button"
         className={cn(
           "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors w-full cursor-pointer",
           editMode
