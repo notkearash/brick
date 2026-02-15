@@ -206,9 +206,7 @@ export function useDocumentEditor(tableName: string | undefined) {
             tableNameRef.current = newName;
             navigateRef.current(`/document/${newName}`, { replace: true });
           }
-        } catch {
-          // rename failed
-        }
+        } catch {}
       }
 
       window.dispatchEvent(new CustomEvent("brick:refresh-tables"));

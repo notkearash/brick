@@ -259,7 +259,6 @@ app.get("/api/tables/:name", (c) => {
     return c.json({ error: "Table not found" }, 404);
   }
 
-  // Build filter WHERE clause
   let filterClause = "";
   let filterParams: (string | number | boolean | null)[] = [];
   if (filtersParam) {
@@ -277,7 +276,6 @@ app.get("/api/tables/:name", (c) => {
     }
   }
 
-  // Combine date WHERE and filter WHERE
   const whereParts: string[] = [];
   const allParams: (string | number | boolean | null)[] = [];
 
