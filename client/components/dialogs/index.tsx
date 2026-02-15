@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Card } from "@/components/ui/card";
 
 interface DialogShellProps {
@@ -7,6 +8,14 @@ interface DialogShellProps {
 }
 
 export function DialogShell({ children, onClose, loading }: DialogShellProps) {
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape" && !loading) onClose();
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose, loading]);
+
   return (
     <div
       role="presentation"
