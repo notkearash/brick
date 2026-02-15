@@ -1,17 +1,17 @@
 import { Hono } from "hono";
-import { cors } from "hono/cors";
 import { serveStatic } from "hono/bun";
-import {
-  getDb,
-  getConfig,
-  setConfig,
-  closeDb,
-  reconnectDb,
-  isBricked,
-  brickUp,
-  copyAndBrick,
-} from "./db";
+import { cors } from "hono/cors";
 import type { FilterCondition } from "../shared/filters";
+import {
+  brickUp,
+  closeDb,
+  copyAndBrick,
+  getConfig,
+  getDb,
+  isBricked,
+  reconnectDb,
+  setConfig,
+} from "./db";
 
 const VALID_OPS = new Set([
   "=",
@@ -30,9 +30,9 @@ const VALID_OPS = new Set([
 function buildFilterWhereClause(
   filters: FilterCondition[],
   validColumns: Set<string>,
-): { clause: string; params: any[] } {
+): { clause: string; params: (string | number | boolean | null)[] } {
   const conditions: string[] = [];
-  const params: any[] = [];
+  const params: (string | number | boolean | null)[] = [];
 
   for (const f of filters) {
     if (!validColumns.has(f.column) || !VALID_OPS.has(f.op)) continue;
@@ -81,7 +81,7 @@ app.post("/api/config", async (c) => {
   }
 
   try {
-    const { existsSync } = await import("fs");
+    const { existsSync } = await import("node:fs");
     if (!existsSync(dbPath)) {
       return c.json({ error: "File does not exist" }, 400);
     }
@@ -245,8 +245,8 @@ app.get("/api/tables/:name", (c) => {
   }
 
   const tableName = c.req.param("name");
-  const limit = parseInt(c.req.query("limit") || "100");
-  const offset = parseInt(c.req.query("offset") || "0");
+  const limit = parseInt(c.req.query("limit") || "100", 10);
+  const offset = parseInt(c.req.query("offset") || "0", 10);
   const startDate = c.req.query("start_date");
   const endDate = c.req.query("end_date");
   const filtersParam = c.req.query("filters");
@@ -261,7 +261,7 @@ app.get("/api/tables/:name", (c) => {
 
   // Build filter WHERE clause
   let filterClause = "";
-  let filterParams: any[] = [];
+  let filterParams: (string | number | boolean | null)[] = [];
   if (filtersParam) {
     try {
       const parsed = JSON.parse(filtersParam) as FilterCondition[];
@@ -279,7 +279,7 @@ app.get("/api/tables/:name", (c) => {
 
   // Combine date WHERE and filter WHERE
   const whereParts: string[] = [];
-  const allParams: any[] = [];
+  const allParams: (string | number | boolean | null)[] = [];
 
   if (startDate && endDate) {
     whereParts.push("start_at < ? AND (end_at >= ? OR end_at IS NULL)");
@@ -322,7 +322,7 @@ app.post("/api/tables/:name", async (c) => {
   const values = Object.values(body) as import("bun:sqlite").SQLQueryBindings[];
 
   try {
-    let result;
+    let result: { lastInsertRowid: number | bigint };
     if (columns.length === 0) {
       result = db.query(`INSERT INTO '${tableName}' DEFAULT VALUES`).run();
     } else {
@@ -363,19 +363,27 @@ app.put("/api/tables/:name/sync", async (c) => {
   }
 
   try {
-    const columns = db.query(`PRAGMA table_info('${tableName}')`).all() as any[];
-    if (!columns.some((c: any) => c.name === "type")) {
-      db.query(`ALTER TABLE '${tableName}' ADD COLUMN type TEXT NOT NULL DEFAULT 'paragraph'`).run();
+    const columns = db.query(`PRAGMA table_info('${tableName}')`).all() as {
+      name: string;
+      type: string;
+      pk: number;
+    }[];
+    if (!columns.some((col) => col.name === "type")) {
+      db.query(
+        `ALTER TABLE '${tableName}' ADD COLUMN type TEXT NOT NULL DEFAULT 'paragraph'`,
+      ).run();
       db.query(`ALTER TABLE '${tableName}' ADD COLUMN attrs TEXT`).run();
     }
 
-    const existing = db
-      .query(`SELECT id FROM '${tableName}'`)
-      .all() as { id: number }[];
+    const existing = db.query(`SELECT id FROM '${tableName}'`).all() as {
+      id: number;
+    }[];
     const existingIds = new Set(existing.map((r) => r.id));
 
     const incomingIds = new Set(
-      blocks.filter((b: any) => b.id != null).map((b: any) => b.id),
+      blocks
+        .filter((b: Record<string, unknown>) => b.id != null)
+        .map((b: Record<string, unknown>) => b.id),
     );
 
     for (const id of existingIds) {
@@ -389,11 +397,24 @@ app.put("/api/tables/:name/sync", async (c) => {
       if (block.id != null && existingIds.has(block.id)) {
         db.query(
           `UPDATE '${tableName}' SET position = ?, content = ?, is_title = ?, type = ?, attrs = ? WHERE id = ?`,
-        ).run(block.position, block.content, block.is_title ? 1 : 0, block.type || "paragraph", attrsStr, block.id);
+        ).run(
+          block.position,
+          block.content,
+          block.is_title ? 1 : 0,
+          block.type || "paragraph",
+          attrsStr,
+          block.id,
+        );
       } else {
         db.query(
           `INSERT INTO '${tableName}' (position, content, is_title, type, attrs) VALUES (?, ?, ?, ?, ?)`,
-        ).run(block.position, block.content, block.is_title ? 1 : 0, block.type || "paragraph", attrsStr);
+        ).run(
+          block.position,
+          block.content,
+          block.is_title ? 1 : 0,
+          block.type || "paragraph",
+          attrsStr,
+        );
       }
     }
 
@@ -443,9 +464,10 @@ app.put("/api/tables/:name/rename", async (c) => {
     db.query(`ALTER TABLE '${oldName}' RENAME TO '${newName}'`).run();
 
     try {
-      db.query(
-        "UPDATE _brick_preferences SET scope = ? WHERE scope = ?",
-      ).run(newName, oldName);
+      db.query("UPDATE _brick_preferences SET scope = ? WHERE scope = ?").run(
+        newName,
+        oldName,
+      );
     } catch {
       // preferences table may not exist
     }
@@ -466,7 +488,11 @@ app.put("/api/tables/:name/:id", async (c) => {
   const id = c.req.param("id");
   const body = await c.req.json();
 
-  const columns = db.query(`PRAGMA table_info('${tableName}')`).all() as any[];
+  const columns = db.query(`PRAGMA table_info('${tableName}')`).all() as {
+    name: string;
+    type: string;
+    pk: number;
+  }[];
   const pkColumn = columns.find((col) => col.pk === 1)?.name || "id";
 
   const setClauses = Object.keys(body)
@@ -499,7 +525,11 @@ app.delete("/api/tables/:name/:id", (c) => {
   const tableName = c.req.param("name");
   const id = c.req.param("id");
 
-  const columns = db.query(`PRAGMA table_info('${tableName}')`).all() as any[];
+  const columns = db.query(`PRAGMA table_info('${tableName}')`).all() as {
+    name: string;
+    type: string;
+    pk: number;
+  }[];
   const pkColumn = columns.find((col) => col.pk === 1)?.name || "id";
 
   try {
@@ -565,14 +595,14 @@ app.get("/api/brick/preferences", (c) => {
   }
 
   const scope = c.req.query("scope");
-  let rows;
-  if (scope !== undefined) {
-    rows = db
-      .query("SELECT key, scope, value FROM _brick_preferences WHERE scope = ?")
-      .all(scope);
-  } else {
-    rows = db.query("SELECT key, scope, value FROM _brick_preferences").all();
-  }
+  const rows =
+    scope !== undefined
+      ? db
+          .query(
+            "SELECT key, scope, value FROM _brick_preferences WHERE scope = ?",
+          )
+          .all(scope)
+      : db.query("SELECT key, scope, value FROM _brick_preferences").all();
   return c.json({ preferences: rows });
 });
 

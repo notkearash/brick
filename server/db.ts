@@ -1,6 +1,6 @@
 import { Database } from "bun:sqlite";
-import { existsSync, readFileSync, writeFileSync } from "fs";
-import path from "path";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import path from "node:path";
 
 const configPath = path.resolve(import.meta.dir, "../config.json");
 
@@ -29,7 +29,10 @@ export function getDb(): Database | null {
   const config = getConfig();
   if (!config.dbPath) return null;
 
-  if (!db || (db as any).filename !== config.dbPath) {
+  if (
+    !db ||
+    (db as unknown as { filename: string }).filename !== config.dbPath
+  ) {
     if (db) db.close();
     try {
       db = new Database(config.dbPath);
