@@ -73,6 +73,8 @@ export function useDocumentEditor(tableName: string | undefined) {
   const navigateRef = useRef(navigate);
   const titleRef = useRef(title);
 
+  const initializedRef = useRef(false);
+
   tableNameRef.current = tableName;
   navigateRef.current = navigate;
   titleRef.current = title;
@@ -84,9 +86,12 @@ export function useDocumentEditor(tableName: string | undefined) {
 
     if (titleRow) {
       titleRowIdRef.current = titleRow.id;
-      setTitleState(titleRow.content);
-      titleRef.current = titleRow.content;
+      if (!initializedRef.current) {
+        setTitleState(titleRow.content);
+        titleRef.current = titleRow.content;
+      }
     }
+    initializedRef.current = true;
 
     const map = new Map<number, number>();
     bodyRows.forEach((row, i) => {
@@ -182,19 +187,21 @@ export function useDocumentEditor(tableName: string | undefined) {
     titleTimerRef.current = setTimeout(async () => {
       if (!tableNameRef.current) return;
 
-      await fetch("/api/brick/preferences", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          key: "display_name",
-          scope: tableNameRef.current,
-          value: newTitle,
-        }),
-      });
+      setStatus("saving");
 
-      const newName = sanitizeTitle(newTitle);
-      if (newName && newName !== tableNameRef.current) {
-        try {
+      try {
+        await fetch("/api/brick/preferences", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            key: "display_name",
+            scope: tableNameRef.current,
+            value: newTitle,
+          }),
+        });
+
+        const newName = sanitizeTitle(newTitle);
+        if (newName && newName !== tableNameRef.current) {
           const res = await fetch(
             `/api/tables/${tableNameRef.current}/rename`,
             {
@@ -207,9 +214,12 @@ export function useDocumentEditor(tableName: string | undefined) {
             tableNameRef.current = newName;
             navigateRef.current(`/document/${newName}`, { replace: true });
           }
-        } catch {
-          toast.error("Failed to rename document");
         }
+
+        setStatus("saved");
+      } catch {
+        setStatus("unsaved");
+        toast.error("Failed to save title");
       }
 
       window.dispatchEvent(new CustomEvent("brick:refresh-tables"));
