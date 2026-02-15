@@ -180,16 +180,16 @@ export function CreateTableDialog({
           error={error}
           backLabel={backLabel}
           onBack={goBack}
-          onSubmit={async () => {
+          onSubmit={async (title) => {
             const docName = `doc_${Date.now()}`;
             await mutation.mutateAsync({
-              body: { name: docName, type: "document" },
+              body: { name: docName, type: "document", title },
               prefs: {
                 scope: docName,
                 values: {
                   view_type: "document",
                   icon: "file-text",
-                  display_name: "Untitled",
+                  display_name: title,
                 },
               },
             });
