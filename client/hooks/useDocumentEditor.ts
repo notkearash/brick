@@ -73,8 +73,6 @@ export function useDocumentEditor(tableName: string | undefined) {
   const navigateRef = useRef(navigate);
   const titleRef = useRef(title);
 
-  const initializedRef = useRef(false);
-
   tableNameRef.current = tableName;
   navigateRef.current = navigate;
   titleRef.current = title;
@@ -86,12 +84,9 @@ export function useDocumentEditor(tableName: string | undefined) {
 
     if (titleRow) {
       titleRowIdRef.current = titleRow.id;
-      if (!initializedRef.current) {
-        setTitleState(titleRow.content);
-        titleRef.current = titleRow.content;
-      }
+      setTitleState(titleRow.content);
+      titleRef.current = titleRow.content;
     }
-    initializedRef.current = true;
 
     const map = new Map<number, number>();
     bodyRows.forEach((row, i) => {
