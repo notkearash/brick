@@ -1,8 +1,8 @@
+import { generateHTML } from "@tiptap/html";
+import type { Editor } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import type { Editor } from "@tiptap/react";
-import { generateHTML } from "@tiptap/html";
-import StarterKit from "@tiptap/starter-kit";
 
 export interface DocRow {
   id: number;
@@ -19,7 +19,7 @@ interface Block {
   content: string;
   is_title: boolean;
   type: string;
-  attrs?: Record<string, any> | null;
+  attrs?: Record<string, unknown> | null;
 }
 
 type SaveStatus = "saved" | "saving" | "unsaved";
@@ -88,7 +88,9 @@ export function useDocumentEditor(tableName: string | undefined) {
     }
 
     const map = new Map<number, number>();
-    bodyRows.forEach((row, i) => map.set(i, row.id));
+    bodyRows.forEach((row, i) => {
+      map.set(i, row.id);
+    });
     bodyIdMapRef.current = map;
   }, []);
 
@@ -112,10 +114,13 @@ export function useDocumentEditor(tableName: string | undefined) {
       attrs: null,
     };
 
-    const allBlocks = [titleBlock, ...bodyBlocks.map((block, i) => ({
-      ...block,
-      id: bodyIdMapRef.current.get(i),
-    }))];
+    const allBlocks = [
+      titleBlock,
+      ...bodyBlocks.map((block, i) => ({
+        ...block,
+        id: bodyIdMapRef.current.get(i),
+      })),
+    ];
 
     try {
       const res = await fetch(`/api/tables/${tableNameRef.current}/sync`, {
@@ -129,12 +134,16 @@ export function useDocumentEditor(tableName: string | undefined) {
       }
       const data = await res.json();
       if (data.rows) {
-        const sorted = (data.rows as any[]).sort((a: any, b: any) => a.position - b.position);
-        const newTitleRow = sorted.find((r: any) => r.is_title);
-        const newBodyRows = sorted.filter((r: any) => !r.is_title);
+        const sorted = (data.rows as DocRow[]).sort(
+          (a, b) => a.position - b.position,
+        );
+        const newTitleRow = sorted.find((r) => r.is_title);
+        const newBodyRows = sorted.filter((r) => !r.is_title);
         if (newTitleRow) titleRowIdRef.current = newTitleRow.id;
         const newMap = new Map<number, number>();
-        newBodyRows.forEach((row: any, i: number) => newMap.set(i, row.id));
+        newBodyRows.forEach((row, i) => {
+          newMap.set(i, row.id);
+        });
         bodyIdMapRef.current = newMap;
       }
       setStatus("saved");
@@ -175,17 +184,24 @@ export function useDocumentEditor(tableName: string | undefined) {
       await fetch("/api/brick/preferences", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: "display_name", scope: tableNameRef.current, value: newTitle }),
+        body: JSON.stringify({
+          key: "display_name",
+          scope: tableNameRef.current,
+          value: newTitle,
+        }),
       });
 
       const newName = sanitizeTitle(newTitle);
       if (newName && newName !== tableNameRef.current) {
         try {
-          const res = await fetch(`/api/tables/${tableNameRef.current}/rename`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ newName }),
-          });
+          const res = await fetch(
+            `/api/tables/${tableNameRef.current}/rename`,
+            {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ newName }),
+            },
+          );
           if (res.ok) {
             tableNameRef.current = newName;
             navigateRef.current(`/document/${newName}`, { replace: true });
@@ -199,12 +215,15 @@ export function useDocumentEditor(tableName: string | undefined) {
     }, 2000);
   }
 
+  const doSaveRef = useRef(doSave);
+  doSaveRef.current = doSave;
+
   useEffect(() => {
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       if (titleTimerRef.current) clearTimeout(titleTimerRef.current);
       if (editorRef.current) {
-        doSave(editorRef.current);
+        doSaveRef.current(editorRef.current);
       }
     };
   }, []);

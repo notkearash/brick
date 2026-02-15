@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { NavigateFunction } from "react-router";
+import type { NavigateFunction } from "react-router";
 import { getViewRoute, type TablePref } from "@/hooks/useTablePrefs";
 
 interface UseKeyboardShortcutsOptions {
@@ -23,7 +23,7 @@ export function useKeyboardShortcuts({
 
       if (e.metaKey && e.key >= "1" && e.key <= "9") {
         e.preventDefault();
-        const index = parseInt(e.key) - 1;
+        const index = parseInt(e.key, 10) - 1;
         if (tables[index]) {
           const vt = tablePrefs?.[tables[index]]?.viewType;
           navigate(`${getViewRoute(vt)}/${tables[index]}`);
