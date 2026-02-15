@@ -151,6 +151,20 @@ app.post("/api/tables", async (c) => {
     }
   }
 
+  if (type === "document") {
+    try {
+      db.query(
+        `CREATE TABLE '${name}' (id INTEGER PRIMARY KEY AUTOINCREMENT, position REAL NOT NULL, content TEXT NOT NULL DEFAULT '', is_title INTEGER NOT NULL DEFAULT 0, type TEXT NOT NULL DEFAULT 'paragraph', attrs TEXT)`,
+      ).run();
+      db.query(
+        `INSERT INTO '${name}' (position, content, is_title) VALUES (1.0, 'Untitled', 1)`,
+      ).run();
+      return c.json({ success: true, name }, 201);
+    } catch (e) {
+      return c.json({ error: `Create table failed: ${e}` }, 400);
+    }
+  }
+
   if (!Array.isArray(cols) || cols.length === 0) {
     return c.json({ error: "At least one column is required" }, 400);
   }
@@ -323,6 +337,122 @@ app.post("/api/tables/:name", async (c) => {
     return c.json({ success: true, id: result.lastInsertRowid }, 201);
   } catch (e) {
     return c.json({ error: `Insert failed: ${e}` }, 400);
+  }
+});
+
+app.put("/api/tables/:name/sync", async (c) => {
+  const db = getDb();
+  if (!db) {
+    return c.json({ error: "No database configured" }, 400);
+  }
+
+  const tableName = c.req.param("name");
+  const body = await c.req.json();
+  const { blocks } = body;
+
+  if (!Array.isArray(blocks)) {
+    return c.json({ error: "blocks array is required" }, 400);
+  }
+
+  const tableExists = db
+    .query("SELECT name FROM sqlite_master WHERE type='table' AND name = ?")
+    .get(tableName);
+
+  if (!tableExists) {
+    return c.json({ error: "Table not found" }, 404);
+  }
+
+  try {
+    const columns = db.query(`PRAGMA table_info('${tableName}')`).all() as any[];
+    if (!columns.some((c: any) => c.name === "type")) {
+      db.query(`ALTER TABLE '${tableName}' ADD COLUMN type TEXT NOT NULL DEFAULT 'paragraph'`).run();
+      db.query(`ALTER TABLE '${tableName}' ADD COLUMN attrs TEXT`).run();
+    }
+
+    const existing = db
+      .query(`SELECT id FROM '${tableName}'`)
+      .all() as { id: number }[];
+    const existingIds = new Set(existing.map((r) => r.id));
+
+    const incomingIds = new Set(
+      blocks.filter((b: any) => b.id != null).map((b: any) => b.id),
+    );
+
+    for (const id of existingIds) {
+      if (!incomingIds.has(id)) {
+        db.query(`DELETE FROM '${tableName}' WHERE id = ?`).run(id);
+      }
+    }
+
+    for (const block of blocks) {
+      const attrsStr = block.attrs ? JSON.stringify(block.attrs) : null;
+      if (block.id != null && existingIds.has(block.id)) {
+        db.query(
+          `UPDATE '${tableName}' SET position = ?, content = ?, is_title = ?, type = ?, attrs = ? WHERE id = ?`,
+        ).run(block.position, block.content, block.is_title ? 1 : 0, block.type || "paragraph", attrsStr, block.id);
+      } else {
+        db.query(
+          `INSERT INTO '${tableName}' (position, content, is_title, type, attrs) VALUES (?, ?, ?, ?, ?)`,
+        ).run(block.position, block.content, block.is_title ? 1 : 0, block.type || "paragraph", attrsStr);
+      }
+    }
+
+    const rows = db
+      .query(`SELECT * FROM '${tableName}' ORDER BY position`)
+      .all();
+    return c.json({ rows });
+  } catch (e) {
+    return c.json({ error: `Sync failed: ${e}` }, 400);
+  }
+});
+
+app.put("/api/tables/:name/rename", async (c) => {
+  const db = getDb();
+  if (!db) {
+    return c.json({ error: "No database configured" }, 400);
+  }
+
+  const oldName = c.req.param("name");
+  const body = await c.req.json();
+  const { newName } = body;
+
+  if (!newName || typeof newName !== "string") {
+    return c.json({ error: "newName is required" }, 400);
+  }
+
+  if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(newName)) {
+    return c.json(
+      { error: "Table name must be alphanumeric (plus underscores)" },
+      400,
+    );
+  }
+
+  if (newName === oldName) {
+    return c.json({ success: true, name: newName });
+  }
+
+  const conflict = db
+    .query("SELECT name FROM sqlite_master WHERE type='table' AND name = ?")
+    .get(newName);
+
+  if (conflict) {
+    return c.json({ error: "A table with that name already exists" }, 409);
+  }
+
+  try {
+    db.query(`ALTER TABLE '${oldName}' RENAME TO '${newName}'`).run();
+
+    try {
+      db.query(
+        "UPDATE _brick_preferences SET scope = ? WHERE scope = ?",
+      ).run(newName, oldName);
+    } catch {
+      // preferences table may not exist
+    }
+
+    return c.json({ success: true, name: newName });
+  } catch (e) {
+    return c.json({ error: `Rename failed: ${e}` }, 400);
   }
 });
 
