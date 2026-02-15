@@ -1,10 +1,10 @@
-import { Routes, Route } from 'react-router'
-import { Layout } from './components/layout/Layout'
-import { Setup } from './pages/Setup'
-import { TableView } from './pages/TableView'
-import { CalendarView } from './pages/CalendarView'
-import { DocumentView } from './pages/DocumentView'
-import { Settings } from './pages/Settings'
+import { Route, Routes } from "react-router";
+import { Layout } from "./components/layout/Layout";
+import { CalendarView } from "./pages/CalendarView";
+import { DocumentView } from "./pages/DocumentView";
+import { Settings } from "./pages/Settings";
+import { Setup } from "./pages/Setup";
+import { TableView } from "./pages/TableView";
 
 export default function App() {
   return (
@@ -18,7 +18,7 @@ export default function App() {
         <Route path="settings" element={<Settings />} />
       </Route>
     </Routes>
-  )
+  );
 }
 
 function Home() {
@@ -26,5 +26,5 @@ function Home() {
     <div className="flex items-center justify-center h-full text-muted-foreground">
       Select an item from the sidebar
     </div>
-  )
+  );
 }
