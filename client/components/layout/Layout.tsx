@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Outlet } from "react-router";
 import { Plus } from "lucide-react";
 import {
@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 import { useBrickStatus } from "@/hooks/useBrickStatus";
 import { useDatabase } from "@/hooks/useDatabase";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
-import { useTablePrefs } from "@/hooks/useTablePrefs";
+import { useTablePrefs, getViewRoute } from "@/hooks/useTablePrefs";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { BrickUpDialog } from "@/components/dialogs/BrickUpDialog";
 import { CreateTableDialog } from "@/components/dialogs/CreateTableDialog";
@@ -30,6 +30,17 @@ import {
   SidebarFooter,
   SortableNavItem,
 } from "@/components/sidebar";
+
+export interface LayoutContext {
+  collapsed: boolean;
+  setCollapsed: (v: boolean | ((prev: boolean) => boolean)) => void;
+  bricked: boolean | null;
+  refreshBrickStatus: () => void;
+  editMode: boolean;
+  setEditMode: (v: boolean | ((prev: boolean) => boolean)) => void;
+  tables: string[];
+  refreshTables: () => void;
+}
 
 export function Layout() {
   const [collapsed, setCollapsed] = useState(false);
@@ -41,7 +52,7 @@ export function Layout() {
 
   const { tables, dbPath, loadDb, navigate } = useDatabase();
   const { bricked, refresh: refreshBrickStatus } = useBrickStatus();
-  const { prefs: tablePrefs, setPref: setTablePref, tableOrder, setTableOrder } = useTablePrefs(bricked);
+  const { prefs: tablePrefs, setPref: setTablePref, tableOrder, setTableOrder, refresh: refreshPrefs } = useTablePrefs(bricked);
 
   const sortedTables = useMemo(() => {
     if (tableOrder.length === 0) return tables;
@@ -54,6 +65,12 @@ export function Layout() {
   }, [tables, tableOrder]);
 
   useKeyboardShortcuts({ tables: sortedTables, navigate, setCollapsed, setEditMode, tablePrefs });
+
+  useEffect(() => {
+    const handler = () => { loadDb(); refreshPrefs(); };
+    window.addEventListener("brick:refresh-tables", handler);
+    return () => window.removeEventListener("brick:refresh-tables", handler);
+  }, [loadDb, refreshPrefs]);
 
   const canReorder = editMode && bricked === true;
 
@@ -181,8 +198,8 @@ export function Layout() {
           onCreated={(name, viewType) => {
             setShowCreateTable(false);
             loadDb();
-            const base = viewType === "calendar" ? "/calendar" : "/table";
-            navigate(`${base}/${name}`);
+            refreshPrefs();
+            navigate(`${getViewRoute(viewType)}/${name}`);
           }}
         />
       )}

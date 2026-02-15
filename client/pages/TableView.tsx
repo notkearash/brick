@@ -4,6 +4,7 @@ import { ColumnDef, PaginationState } from "@tanstack/react-table";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { DataTable } from "@/components/data-table/DataTable";
 import type { FilterCondition } from "@shared/filters";
+import type { LayoutContext } from "@/components/layout/Layout";
 
 function CellContent({ value }: { value: unknown }) {
   const [expanded, setExpanded] = useState(false);
@@ -47,12 +48,6 @@ interface TableData {
   total: number;
   limit: number;
   offset: number;
-}
-
-interface LayoutContext {
-  collapsed: boolean;
-  setCollapsed: (v: boolean | ((prev: boolean) => boolean)) => void;
-  editMode: boolean;
 }
 
 export function TableView() {

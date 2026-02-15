@@ -1,14 +1,25 @@
 import { useCallback, useEffect, useState } from "react";
 
 export type TableColor = "none" | "orange" | "purple" | "cyan";
-export type TableIcon = "table" | "grid" | "list" | "people" | "calendar" | "calendar-days" | "calendar-check" | "calendar-clock";
+export type TableIcon = "table" | "grid" | "list" | "people" | "calendar" | "calendar-days" | "calendar-check" | "calendar-clock" | "file-text";
 
-export type ViewType = "table" | "calendar";
+export type ViewType = "table" | "calendar" | "document";
+
+const VIEW_ROUTES: Record<ViewType, string> = {
+  table: "/table",
+  calendar: "/calendar",
+  document: "/document",
+};
+
+export function getViewRoute(viewType?: ViewType): string {
+  return VIEW_ROUTES[viewType ?? "table"] ?? "/table";
+}
 
 export interface TablePref {
   color?: TableColor;
   icon?: TableIcon;
   viewType?: ViewType;
+  displayName?: string;
 }
 
 type TablePrefs = Record<string, TablePref>;
@@ -45,6 +56,11 @@ export function useTablePrefs(bricked: boolean | null) {
             map[row.scope].viewType = row.value as ViewType;
             continue;
           }
+          if (row.key === "display_name") {
+            if (!map[row.scope]) map[row.scope] = {};
+            map[row.scope].displayName = row.value;
+            continue;
+          }
           if (row.key !== "color" && row.key !== "icon") continue;
           if (!map[row.scope]) map[row.scope] = {};
           (map[row.scope] as any)[row.key] = row.value;
@@ -75,7 +91,7 @@ export function useTablePrefs(bricked: boolean | null) {
         return next;
       });
 
-      const KEY_MAP: Record<string, string> = { viewType: "view_type" };
+      const KEY_MAP: Record<string, string> = { viewType: "view_type", displayName: "display_name" };
       for (const [key, value] of Object.entries(update)) {
         const apiKey = KEY_MAP[key] || key;
         if (value === DEFAULTS[apiKey]) {
@@ -108,5 +124,5 @@ export function useTablePrefs(bricked: boolean | null) {
     [],
   );
 
-  return { prefs, setPref, tableOrder, setTableOrder };
+  return { prefs, setPref, tableOrder, setTableOrder, refresh: load };
 }

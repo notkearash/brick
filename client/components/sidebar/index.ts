@@ -1,4 +1,4 @@
-import { Table2, LayoutGrid, List, Users, Calendar, CalendarDays, CalendarCheck, CalendarClock } from "lucide-react";
+import { Table2, LayoutGrid, List, Users, Calendar, CalendarDays, CalendarCheck, CalendarClock, FileText } from "lucide-react";
 import type { TableColor, TableIcon } from "@/hooks/useTablePrefs";
 
 export const TABLE_ICONS: Record<TableIcon, typeof Table2> = {
@@ -10,6 +10,7 @@ export const TABLE_ICONS: Record<TableIcon, typeof Table2> = {
   "calendar-days": CalendarDays,
   "calendar-check": CalendarCheck,
   "calendar-clock": CalendarClock,
+  "file-text": FileText,
 };
 
 export function getTableIcon(iconType: TableIcon) {
@@ -59,7 +60,9 @@ export const CALENDAR_ICON_OPTIONS = [
   { value: "calendar-clock" as const, Icon: CalendarClock },
 ];
 
-export const ICON_OPTIONS = TABLE_ICON_OPTIONS;
+export const DOCUMENT_ICON_OPTIONS = [
+  { value: "file-text" as const, Icon: FileText },
+];
 
 export { SidebarHeader } from "./SidebarHeader";
 export { SidebarFooter } from "./SidebarFooter";

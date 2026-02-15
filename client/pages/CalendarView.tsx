@@ -25,12 +25,7 @@ import { MonthView } from "@/components/calendar/MonthView";
 import { WeekView } from "@/components/calendar/WeekView";
 import { DayView } from "@/components/calendar/DayView";
 import { EventDialog } from "@/components/calendar/EventDialog";
-
-interface LayoutContext {
-  collapsed: boolean;
-  setCollapsed: (v: boolean | ((prev: boolean) => boolean)) => void;
-  editMode: boolean;
-}
+import type { LayoutContext } from "@/components/layout/Layout";
 
 export function CalendarView() {
   const { tableName } = useParams<{ tableName: string }>();

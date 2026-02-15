@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { NavigateFunction } from "react-router";
-import type { TablePref } from "@/hooks/useTablePrefs";
+import { getViewRoute, type TablePref } from "@/hooks/useTablePrefs";
 
 interface UseKeyboardShortcutsOptions {
   tables: string[];
@@ -26,8 +26,7 @@ export function useKeyboardShortcuts({
         const index = parseInt(e.key) - 1;
         if (tables[index]) {
           const vt = tablePrefs?.[tables[index]]?.viewType;
-          const base = vt === "calendar" ? "/calendar" : "/table";
-          navigate(`${base}/${tables[index]}`);
+          navigate(`${getViewRoute(vt)}/${tables[index]}`);
         }
       }
 
