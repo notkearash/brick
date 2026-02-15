@@ -3,6 +3,7 @@ import type { Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
+import { toast } from "sonner";
 
 export interface DocRow {
   id: number;
@@ -206,7 +207,9 @@ export function useDocumentEditor(tableName: string | undefined) {
             tableNameRef.current = newName;
             navigateRef.current(`/document/${newName}`, { replace: true });
           }
-        } catch {}
+        } catch {
+          toast.error("Failed to rename document");
+        }
       }
 
       window.dispatchEvent(new CustomEvent("brick:refresh-tables"));
