@@ -24,7 +24,10 @@ export function getEventClasses(color: string | null): string {
 
 export const HOUR_HEIGHT = 48;
 
-export function getEventsForDay(events: CalendarEvent[], day: Date): CalendarEvent[] {
+export function getEventsForDay(
+  events: CalendarEvent[],
+  day: Date,
+): CalendarEvent[] {
   return events.filter((event) => {
     const start = new Date(event.start_at);
     const end = event.end_at ? new Date(event.end_at) : start;
@@ -40,5 +43,5 @@ export function isAllDay(event: CalendarEvent): boolean {
   if (!event.end_at) return false;
   const start = new Date(event.start_at);
   const end = new Date(event.end_at);
-  return (end.getTime() - start.getTime()) >= 1440 * 60000;
+  return end.getTime() - start.getTime() >= 1440 * 60000;
 }

@@ -1,12 +1,12 @@
-import { Button } from "@/components/ui/button";
 import {
-  PanelLeftClose,
-  PanelLeftOpen,
   ChevronLeft,
   ChevronRight,
+  PanelLeftClose,
+  PanelLeftOpen,
   Plus,
   RefreshCw,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export type CalendarViewMode = "month" | "week" | "day";
@@ -100,6 +100,7 @@ export function CalendarToolbar({
         <div className="flex bg-muted rounded-md p-0.5">
           {(["month", "week", "day"] as const).map((mode) => (
             <button
+              type="button"
               key={mode}
               className={cn(
                 "px-2 py-0.5 text-xs rounded cursor-pointer transition-colors capitalize",

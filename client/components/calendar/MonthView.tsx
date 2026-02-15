@@ -1,12 +1,12 @@
 import {
-  startOfMonth,
-  endOfMonth,
-  startOfWeek,
-  endOfWeek,
   eachDayOfInterval,
+  endOfMonth,
+  endOfWeek,
   format,
   isSameMonth,
   isToday,
+  startOfMonth,
+  startOfWeek,
 } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { CalendarEvent } from ".";
@@ -56,11 +56,19 @@ export function MonthView({
           return (
             <div
               key={day.toISOString()}
+              role="button"
+              tabIndex={0}
               className={cn(
                 "border-r border-b last:border-r-0 p-1 min-h-0 overflow-hidden cursor-pointer hover:bg-muted/50 transition-colors",
                 !isCurrentMonth && "bg-muted/20",
               )}
               onClick={() => onDateClick?.(day)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onDateClick?.(day);
+                }
+              }}
             >
               <div
                 className={cn(
@@ -75,6 +83,7 @@ export function MonthView({
               <div className="space-y-0.5">
                 {dayEvents.slice(0, MAX_VISIBLE_EVENTS).map((event) => (
                   <button
+                    type="button"
                     key={event.id}
                     className={cn(
                       "w-full text-left text-[10px] leading-tight px-1 py-0.5 rounded truncate cursor-pointer",
