@@ -30,9 +30,14 @@ export function useKeyboardShortcuts({
         }
       }
 
-      if (e.key === "s" && e.metaKey && !e.altKey) {
+      if (e.key === "s" && e.metaKey && e.shiftKey && !e.altKey) {
         e.preventDefault();
         setCollapsed((c) => !c);
+      }
+
+      if (e.key === "s" && e.metaKey && !e.shiftKey && !e.altKey) {
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent("brick:force-save"));
       }
 
       if (e.key === "," && e.metaKey) {

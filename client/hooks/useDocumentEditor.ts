@@ -220,7 +220,13 @@ export function useDocumentEditor(tableName: string | undefined) {
   doSaveRef.current = doSave;
 
   useEffect(() => {
+    const handleForceSave = () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      if (editorRef.current) doSaveRef.current(editorRef.current);
+    };
+    window.addEventListener("brick:force-save", handleForceSave);
     return () => {
+      window.removeEventListener("brick:force-save", handleForceSave);
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       if (titleTimerRef.current) clearTimeout(titleTimerRef.current);
       if (editorRef.current) {
@@ -229,5 +235,17 @@ export function useDocumentEditor(tableName: string | undefined) {
     };
   }, []);
 
-  return { status, title, onTitleChange, onEditorUpdate, initFromRows };
+  function forceSave() {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    if (editorRef.current) doSave(editorRef.current);
+  }
+
+  return {
+    status,
+    title,
+    onTitleChange,
+    onEditorUpdate,
+    initFromRows,
+    forceSave,
+  };
 }
