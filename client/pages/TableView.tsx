@@ -4,7 +4,9 @@ import type { ColumnDef, PaginationState } from "@tanstack/react-table";
 import { useEffect, useState } from "react";
 import { useOutletContext, useParams } from "react-router";
 import { DataTable } from "@/components/data-table/DataTable";
+import { ColumnOptionsDialog } from "@/components/dialogs/ColumnOptionsDialog";
 import type { LayoutContext } from "@/components/layout/Layout";
+import { COLOR_CLASSES, useColumnOptions } from "@/hooks/useColumnOptions";
 
 function CellContent({ value }: { value: unknown }) {
   const [expanded, setExpanded] = useState(false);
@@ -52,7 +54,7 @@ interface TableData {
 
 export function TableView() {
   const { tableName } = useParams<{ tableName: string }>();
-  const { collapsed, setCollapsed, editMode } =
+  const { collapsed, setCollapsed, editMode, bricked } =
     useOutletContext<LayoutContext>();
   const queryClient = useQueryClient();
   const [pagination, setPagination] = useState<PaginationState>({
@@ -60,6 +62,8 @@ export function TableView() {
     pageSize: Number(localStorage.getItem("brick-page-size")) || 50,
   });
   const [filters, setFilters] = useState<FilterCondition[]>([]);
+  const { columnOptions, setColumnOptions } = useColumnOptions(tableName, bricked);
+  const [configuringColumn, setConfiguringColumn] = useState<string | null>(null);
 
   useEffect(() => {
     if (tableName) {
@@ -147,13 +151,28 @@ export function TableView() {
   const columns: ColumnDef<Record<string, unknown>>[] = schema.map((col) => ({
     accessorKey: col.name,
     header: col.name,
-    cell: ({ getValue }) => <CellContent value={getValue()} />,
+    cell: ({ getValue }) => {
+      const v = getValue();
+      const opts = columnOptions[col.name];
+      const match = opts?.find((o) => o.value === v);
+      if (match) {
+        return (
+          <span
+            className={`inline-block px-1.5 py-0.5 text-xs rounded font-medium ${COLOR_CLASSES[match.color].badge}`}
+          >
+            {match.value}
+          </span>
+        );
+      }
+      return <CellContent value={v} />;
+    },
   }));
 
   const pkColumn = schema.find((col) => col.pk === 1)?.name;
 
   return (
-    <DataTable
+    <>
+      <DataTable
       columns={columns}
       data={data.rows}
       filters={filters}
@@ -169,6 +188,8 @@ export function TableView() {
       pkColumn={pkColumn}
       schema={schema}
       editMode={editMode}
+      columnOptions={columnOptions}
+      onConfigureColumnOptions={setConfiguringColumn}
       onDeleteRows={
         pkColumn
           ? async (rows) => {
@@ -184,6 +205,15 @@ export function TableView() {
             }
           : undefined
       }
-    />
+      />
+      {configuringColumn && (
+        <ColumnOptionsDialog
+        column={configuringColumn}
+        currentOptions={columnOptions[configuringColumn] ?? []}
+        onSave={setColumnOptions}
+          onClose={() => setConfiguringColumn(null)}
+        />
+      )}
+    </>
   );
 }
