@@ -12,15 +12,22 @@ import {
   type VisibilityState,
 } from "@tanstack/react-table";
 import {
+  Binary,
+  Calendar,
   ChevronLeft,
   ChevronRight,
+  ChevronsUpDown,
   Columns3,
+  Hash,
   ListFilter,
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
   RefreshCw,
+  Text,
+  ToggleLeft,
   Trash2,
+  Type,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -33,6 +40,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import { COLOR_CLASSES, type ColumnOption } from "@/hooks/useColumnOptions";
 import { cn } from "@/lib/utils";
 import { FilterRow } from "./FilterBuilder";
 
@@ -43,6 +62,19 @@ interface SchemaColumn {
   notnull: number;
   dflt_value: string | null;
   pk: number;
+}
+
+function getTypeIcon(type: string, hasDropdown: boolean) {
+  if (hasDropdown) return ChevronsUpDown;
+  const t = type.toLowerCase();
+  if (t.includes("int") || t.includes("real") || t.includes("numeric") || t.includes("float") || t.includes("double"))
+    return Hash;
+  if (t.includes("bool")) return ToggleLeft;
+  if (t.includes("date") || t.includes("time")) return Calendar;
+  if (t.includes("blob")) return Binary;
+  if (t.includes("varchar") || t.includes("char")) return Type;
+  if (t.includes("text")) return Text;
+  return Text;
 }
 
 interface EditingCell {
@@ -70,6 +102,8 @@ interface DataTableProps<TData, TValue> {
   schema?: SchemaColumn[];
   editMode?: boolean;
   onDeleteRows?: (rows: TData[]) => Promise<void>;
+  columnOptions?: Record<string, ColumnOption[]>;
+  onConfigureColumnOptions?: (column: string) => void;
 }
 
 export function DataTable<TData, TValue>({
@@ -89,6 +123,8 @@ export function DataTable<TData, TValue>({
   schema,
   editMode = false,
   onDeleteRows,
+  columnOptions,
+  onConfigureColumnOptions,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -551,16 +587,89 @@ export function DataTable<TData, TValue>({
           <TableHeader className="sticky top-0 bg-background z-10">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
+                {headerGroup.headers.map((header) => {
+                  const colId = header.column.id;
+                  const schemaCol = schema?.find((s) => s.name === colId);
+                  const hasDropdown = !!columnOptions?.[colId]?.length;
+                  const sqlType = schemaCol?.type || "";
+                  const TypeIcon = schemaCol
+                    ? getTypeIcon(sqlType, hasDropdown)
+                    : null;
+                  const canConfigure =
+                    onConfigureColumnOptions &&
+                    colId !== "_select" &&
+                    colId !== pkColumn;
+
+                  const headerInner = (
+                    <div className="flex items-center gap-1.5">
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
+                      {TypeIcon && (
+                        <TypeIcon className="h-3 w-3 text-muted-foreground/40 shrink-0" />
+                      )}
+                    </div>
+                  );
+
+                  if (!canConfigure) {
+                    return (
+                      <TableHead key={header.id}>{headerInner}</TableHead>
+                    );
+                  }
+
+                  return (
+                    <ContextMenu key={header.id}>
+                      <ContextMenuTrigger asChild>
+                        <TableHead>{headerInner}</TableHead>
+                      </ContextMenuTrigger>
+                      <ContextMenuContent className="px-2 py-1.5 min-w-0">
+                        <ContextMenuLabel className="px-0 py-0 pb-1.5 text-xs">
+                          {colId}{" "}
+                          <span className="text-muted-foreground font-normal">
+                            {hasDropdown ? "dropdown" : sqlType.toLowerCase()}
+                          </span>
+                        </ContextMenuLabel>
+                        <ContextMenuSeparator className="mx-0" />
+                        <ContextMenuSub>
+                          <ContextMenuSubTrigger className="cursor-pointer gap-2">
+                            Change type
+                          </ContextMenuSubTrigger>
+                          <ContextMenuSubContent>
+                            <ContextMenuLabel className="text-[10px] text-muted-foreground px-2 py-1">
+                              Smart
+                            </ContextMenuLabel>
+                            <ContextMenuItem
+                              className="cursor-pointer gap-2"
+                              onClick={() =>
+                                onConfigureColumnOptions(colId)
+                              }
+                            >
+                              <ChevronsUpDown className="h-3.5 w-3.5" />
+                              Dropdown
+                            </ContextMenuItem>
+                          </ContextMenuSubContent>
+                        </ContextMenuSub>
+                        {hasDropdown && (
+                          <>
+                            <ContextMenuSeparator className="mx-0" />
+                            <ContextMenuItem
+                              className="cursor-pointer gap-2"
+                              onClick={() =>
+                                onConfigureColumnOptions(colId)
+                              }
+                            >
+                              <ChevronsUpDown className="h-3.5 w-3.5" />
+                              Edit dropdown options
+                            </ContextMenuItem>
+                          </>
                         )}
-                  </TableHead>
-                ))}
+                      </ContextMenuContent>
+                    </ContextMenu>
+                  );
+                })}
               </TableRow>
             ))}
           </TableHeader>
@@ -620,7 +729,42 @@ export function DataTable<TData, TValue>({
         </Table>
       </div>
 
-      {editingCell && (
+      {editingCell && columnOptions?.[editingCell.columnId]?.length ? (
+        <div
+          ref={editorRef}
+          className="fixed z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover/40 backdrop-blur-xl backdrop-saturate-150 p-1 text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
+          style={{
+            top: editingCell.rect.top + 4,
+            left: editingCell.rect.left,
+          }}
+        >
+          {columnOptions[editingCell.columnId].map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                className={cn(
+                  "relative flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none",
+                  COLOR_CLASSES[opt.color].hover,
+                  editValue === opt.value && "font-medium",
+                )}
+                onClick={() => handleSave(opt.value)}
+              >
+                {opt.color !== "none" && (
+                  <span
+                    className={cn(
+                      "h-2 w-2 rounded-full shrink-0",
+                      COLOR_CLASSES[opt.color].dot,
+                    )}
+                  />
+                )}
+                {opt.value}
+              </button>
+          ))}
+          {editError && (
+            <p className="text-xs text-destructive px-2 py-1">{editError}</p>
+          )}
+        </div>
+      ) : editingCell ? (
         <div
           ref={editorRef}
           className="fixed bg-popover text-popover-foreground border rounded-md shadow-lg z-50 p-3"
@@ -687,7 +831,7 @@ export function DataTable<TData, TValue>({
             </Button>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
