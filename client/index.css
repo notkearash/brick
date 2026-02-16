@@ -1,6 +1,14 @@
 @import "tailwindcss";
 
 @font-face {
+  font-family: "Geist";
+  src: url("/Geist-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
   font-family: "Geist Mono";
   src: url("/GeistMono-Variable.woff2") format("woff2");
   font-weight: 100 900;
@@ -14,6 +22,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+    --font-sans: "Geist", sans-serif;
+    --font-mono: "Geist Mono", monospace;
     --radius-sm: calc(var(--radius) - 4px);
     --radius-md: calc(var(--radius) - 2px);
     --radius-lg: var(--radius);
@@ -62,17 +72,17 @@
   --card-foreground: oklch(0.141 0.005 285.823);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.141 0.005 285.823);
-  --primary: oklch(0.67 0.16 58);
-  --primary-foreground: oklch(0.99 0.02 95);
+  --primary: oklch(0.205 0.006 286);
+  --primary-foreground: oklch(1 0 0);
   --secondary: oklch(0.967 0.001 286.375);
   --secondary-foreground: oklch(0.21 0.006 285.885);
   --muted: oklch(0.967 0.001 286.375);
   --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.67 0.16 58);
-  --accent-foreground: oklch(0.99 0.02 95);
+  --accent: oklch(0.65 0.15 55);
+  --accent-foreground: oklch(0.25 0.02 50);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
+  --border: oklch(0.88 0.004 286);
+  --input: oklch(0.88 0.004 286);
   --ring: oklch(0.705 0.015 286.067);
   --chart-1: oklch(0.88 0.15 92);
   --chart-2: oklch(0.77 0.16 70);
@@ -81,29 +91,29 @@
   --chart-5: oklch(0.47 0.12 46);
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-primary: oklch(0.67 0.16 58);
-  --sidebar-primary-foreground: oklch(0.99 0.02 95);
-  --sidebar-accent: oklch(0.67 0.16 58);
-  --sidebar-accent-foreground: oklch(0.99 0.02 95);
-  --sidebar-border: oklch(0.92 0.004 286.32);
+  --sidebar-primary: oklch(0.205 0.006 286);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.205 0.006 286);
+  --sidebar-accent-foreground: oklch(1 0 0);
+  --sidebar-border: oklch(0.88 0.004 286);
   --sidebar-ring: oklch(0.705 0.015 286.067);
 }
 
 .dark {
-  --background: oklch(0.141 0.005 285.823);
+  --background: oklch(0.145 0.003 285);
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.21 0.006 285.885);
+  --card: oklch(0.19 0.003 285);
   --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.21 0.006 285.885);
+  --popover: oklch(0.19 0.003 285);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.77 0.16 70);
-  --primary-foreground: oklch(0.28 0.07 46);
-  --secondary: oklch(0.274 0.006 286.033);
+  --primary: oklch(0.92 0.01 80);
+  --primary-foreground: oklch(0.19 0.003 285);
+  --secondary: oklch(0.25 0.003 285);
   --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.274 0.006 286.033);
+  --muted: oklch(0.25 0.003 285);
   --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(0.77 0.16 70);
-  --accent-foreground: oklch(0.28 0.07 46);
+  --accent: oklch(0.75 0.14 65);
+  --accent-foreground: oklch(0.19 0.003 285);
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
@@ -113,12 +123,12 @@
   --chart-3: oklch(0.67 0.16 58);
   --chart-4: oklch(0.56 0.15 49);
   --chart-5: oklch(0.47 0.12 46);
-  --sidebar: oklch(0.21 0.006 285.885);
+  --sidebar: oklch(0.19 0.003 285);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.77 0.16 70);
-  --sidebar-primary-foreground: oklch(0.28 0.07 46);
-  --sidebar-accent: oklch(0.77 0.16 70);
-  --sidebar-accent-foreground: oklch(0.28 0.07 46);
+  --sidebar-primary: oklch(0.92 0.01 80);
+  --sidebar-primary-foreground: oklch(0.19 0.003 285);
+  --sidebar-accent: oklch(0.92 0.01 80);
+  --sidebar-accent-foreground: oklch(0.19 0.003 285);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.552 0.016 285.938);
 }
@@ -129,7 +139,7 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: "Geist Mono", monospace;
+    font-family: "Geist", sans-serif;
     -webkit-user-select: none;
     user-select: none;
   }
@@ -144,6 +154,12 @@
   outline: none;
   user-select: text;
   -webkit-user-select: text;
+  font-family: "Geist", sans-serif;
+}
+
+.brick-editor .ProseMirror code,
+.brick-editor .ProseMirror pre {
+  font-family: "Geist Mono", monospace;
 }
 
 .brick-editor .ProseMirror h1 {

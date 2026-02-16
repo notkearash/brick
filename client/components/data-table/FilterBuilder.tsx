@@ -78,7 +78,7 @@ export function FilterRow({
           value={filter.value ?? ""}
           onChange={(e) => onChange({ value: e.target.value })}
           placeholder={filter.op === "in" ? "val1, val2, ..." : "value"}
-          className="h-6 text-xs w-40"
+          className="h-6 text-xs font-mono w-40"
         />
       )}
 

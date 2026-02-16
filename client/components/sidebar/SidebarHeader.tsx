@@ -56,7 +56,7 @@ export function SidebarHeader({
               />
             </span>
             {dbPath && (
-              <span className="flex items-center gap-1.5 text-xs text-muted-foreground group-hover:text-foreground transition-colors">
+              <span className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground group-hover:text-foreground transition-colors">
                 <Folder className="h-3.5 w-3.5" />
                 ../{dbPath.split("/").pop()}
               </span>

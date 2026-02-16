@@ -16,7 +16,7 @@ function CellContent({ value }: { value: unknown }) {
   const str = typeof value === "object" ? JSON.stringify(value) : String(value);
   const isLong = str.length > 60;
 
-  if (!isLong) return <span className="whitespace-nowrap">{str}</span>;
+  if (!isLong) return <span className="whitespace-nowrap font-mono">{str}</span>;
 
   return (
     <button
@@ -24,8 +24,8 @@ function CellContent({ value }: { value: unknown }) {
       onClick={() => setExpanded((e) => !e)}
       className={
         expanded
-          ? "text-left whitespace-pre-wrap wrap-break-words max-w-md"
-          : "text-left truncate block max-w-50 cursor-pointer hover:text-foreground/80"
+          ? "text-left whitespace-pre-wrap wrap-break-words max-w-md font-mono"
+          : "text-left truncate block max-w-50 cursor-pointer hover:text-foreground/80 font-mono"
       }
       title={expanded ? "Click to collapse" : "Click to expand"}
     >

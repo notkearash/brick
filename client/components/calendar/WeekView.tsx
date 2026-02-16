@@ -107,7 +107,7 @@ export function WeekView({
           {hours.map((hour) => (
             <div
               key={hour.toISOString()}
-              className="text-[10px] text-muted-foreground text-right pr-1 -translate-y-1/2 col-start-1"
+              className="text-[10px] font-mono text-muted-foreground text-right pr-1 -translate-y-1/2 col-start-1"
               style={{
                 gridRow: `${hour.getHours() + 1}`,
                 position: "absolute",
