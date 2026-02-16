@@ -98,7 +98,7 @@ export function CreateTableDialog({
                 type: "table" as const,
                 icon: Table2,
                 label: "Table",
-                desc: "Custom columns, data grid",
+                desc: "Classic data grid",
               },
               {
                 type: "calendar" as const,
@@ -117,8 +117,8 @@ export function CreateTableDialog({
                 type="button"
                 key={type}
                 className={cn(
-                  "flex flex-col items-center gap-2 rounded-md border p-4 text-sm font-medium transition-colors",
-                  "hover:ring-1 hover:ring-ring cursor-pointer",
+                  "flex flex-col items-center gap-2 p-4 text-sm font-medium transition-all rounded-lg cursor-pointer",
+                  "bg-muted/50 hover:shadow-[inset_0_2px_8px_rgba(57,57,62,0.5),inset_0_-1px_5px_rgba(57,57,62,0.25)] hover:bg-muted",
                 )}
                 onClick={() => setItemType(type)}
               >
