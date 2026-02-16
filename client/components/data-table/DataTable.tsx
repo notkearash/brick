@@ -67,7 +67,13 @@ interface SchemaColumn {
 function getTypeIcon(type: string, hasDropdown: boolean) {
   if (hasDropdown) return ChevronsUpDown;
   const t = type.toLowerCase();
-  if (t.includes("int") || t.includes("real") || t.includes("numeric") || t.includes("float") || t.includes("double"))
+  if (
+    t.includes("int") ||
+    t.includes("real") ||
+    t.includes("numeric") ||
+    t.includes("float") ||
+    t.includes("double")
+  )
     return Hash;
   if (t.includes("bool")) return ToggleLeft;
   if (t.includes("date") || t.includes("time")) return Calendar;
@@ -615,9 +621,7 @@ export function DataTable<TData, TValue>({
                   );
 
                   if (!canConfigure) {
-                    return (
-                      <TableHead key={header.id}>{headerInner}</TableHead>
-                    );
+                    return <TableHead key={header.id}>{headerInner}</TableHead>;
                   }
 
                   return (
@@ -643,9 +647,7 @@ export function DataTable<TData, TValue>({
                             </ContextMenuLabel>
                             <ContextMenuItem
                               className="cursor-pointer gap-2"
-                              onClick={() =>
-                                onConfigureColumnOptions(colId)
-                              }
+                              onClick={() => onConfigureColumnOptions(colId)}
                             >
                               <ChevronsUpDown className="h-3.5 w-3.5" />
                               Dropdown
@@ -657,9 +659,7 @@ export function DataTable<TData, TValue>({
                             <ContextMenuSeparator className="mx-0" />
                             <ContextMenuItem
                               className="cursor-pointer gap-2"
-                              onClick={() =>
-                                onConfigureColumnOptions(colId)
-                              }
+                              onClick={() => onConfigureColumnOptions(colId)}
                             >
                               <ChevronsUpDown className="h-3.5 w-3.5" />
                               Edit dropdown options
@@ -732,33 +732,33 @@ export function DataTable<TData, TValue>({
       {editingCell && columnOptions?.[editingCell.columnId]?.length ? (
         <div
           ref={editorRef}
-          className="fixed z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover/40 backdrop-blur-xl backdrop-saturate-150 p-1 text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
+          className="fixed z-50 min-w-32 overflow-hidden rounded-md border bg-popover/40 backdrop-blur-xl backdrop-saturate-150 p-1 text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
           style={{
             top: editingCell.rect.top + 4,
             left: editingCell.rect.left,
           }}
         >
           {columnOptions[editingCell.columnId].map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                className={cn(
-                  "relative flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none",
-                  COLOR_CLASSES[opt.color].hover,
-                  editValue === opt.value && "font-medium",
-                )}
-                onClick={() => handleSave(opt.value)}
-              >
-                {opt.color !== "none" && (
-                  <span
-                    className={cn(
-                      "h-2 w-2 rounded-full shrink-0",
-                      COLOR_CLASSES[opt.color].dot,
-                    )}
-                  />
-                )}
-                {opt.value}
-              </button>
+            <button
+              key={opt.value}
+              type="button"
+              className={cn(
+                "relative flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none",
+                COLOR_CLASSES[opt.color].hover,
+                editValue === opt.value && "font-medium",
+              )}
+              onClick={() => handleSave(opt.value)}
+            >
+              {opt.color !== "none" && (
+                <span
+                  className={cn(
+                    "h-2 w-2 rounded-full shrink-0",
+                    COLOR_CLASSES[opt.color].dot,
+                  )}
+                />
+              )}
+              {opt.value}
+            </button>
           ))}
           {editError && (
             <p className="text-xs text-destructive px-2 py-1">{editError}</p>
