@@ -34,18 +34,18 @@ export function SidebarHeader({
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            className="group flex items-center justify-between w-full h-full cursor-pointer px-3 focus:outline-none"
+            className="group flex items-center gap-2 w-full h-full cursor-pointer px-3 focus:outline-none"
             title={dbPath ?? undefined}
           >
             <span className="flex items-center gap-2">
               {showPing && (
                 <span className="flex h-2.5 w-2.5 shrink-0">
-                  <span className="animate-ping absolute inline-flex h-2.5 w-2.5 rounded-full bg-primary opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary" />
+                  <span className="animate-ping absolute inline-flex h-2.5 w-2.5 rounded-full bg-amber-500 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500" />
                 </span>
               )}
               <img
-                src="/with-text.svg"
+                src="/no-text.svg"
                 alt="Brick"
                 className={cn(
                   "h-6 transition-opacity",
@@ -68,7 +68,7 @@ export function SidebarHeader({
             <DropdownMenuItem onClick={onShowBrickDialog}>
               <span className="relative mr-2">
                 <ToyBrick className="h-3.5 w-3.5" />
-                <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-primary" />
+                <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-amber-500" />
               </span>
               Brick it up
             </DropdownMenuItem>
