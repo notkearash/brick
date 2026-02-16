@@ -114,7 +114,7 @@ export function Layout() {
     <div className="flex h-screen">
       <aside
         className={cn(
-          "border-r bg-background/60 flex flex-col shrink-0 transition-[width] duration-200",
+          "border-r bg-background dark:bg-background/60 flex flex-col shrink-0 transition-[width] duration-200",
           collapsed ? "w-14" : "w-64",
         )}
       >
