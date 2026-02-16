@@ -114,7 +114,7 @@ export function Layout() {
     <div className="flex h-screen">
       <aside
         className={cn(
-          "border-r bg-card flex flex-col shrink-0 transition-[width] duration-200",
+          "border-r bg-background/60 flex flex-col shrink-0 transition-[width] duration-200",
           collapsed ? "w-14" : "w-64",
         )}
       >
@@ -182,7 +182,7 @@ export function Layout() {
         />
       </aside>
 
-      <main className="flex-1 min-w-0 min-h-0 overflow-hidden">
+      <main className="flex-1 min-w-0 min-h-0 overflow-hidden bg-background">
         <Outlet
           context={{
             collapsed,
