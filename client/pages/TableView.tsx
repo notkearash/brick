@@ -1,8 +1,8 @@
 import type { FilterCondition } from "@shared/filters";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef, PaginationState } from "@tanstack/react-table";
-import { useEffect, useState } from "react";
-import { useOutletContext, useParams } from "react-router";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useOutletContext, useParams } from "react-router";
 import { DataTable } from "@/components/data-table/DataTable";
 import { ColumnOptionsDialog } from "@/components/dialogs/ColumnOptionsDialog";
 import type { LayoutContext } from "@/components/layout/Layout";
@@ -18,7 +18,8 @@ function CellContent({ value }: { value: unknown }) {
   const str = typeof value === "object" ? JSON.stringify(value) : String(value);
   const isLong = str.length > 60;
 
-  if (!isLong) return <span className="whitespace-nowrap font-mono">{str}</span>;
+  if (!isLong)
+    return <span className="whitespace-nowrap font-mono">{str}</span>;
 
   return (
     <button
@@ -45,6 +46,19 @@ interface SchemaColumn {
   pk: number;
 }
 
+interface ForeignKey {
+  id: number;
+  seq: number;
+  table: string;
+  from: string;
+  to: string;
+}
+
+interface SchemaResult {
+  columns: SchemaColumn[];
+  foreignKeys: ForeignKey[];
+}
+
 interface TableData {
   rows: Record<string, unknown>[];
   total: number;
@@ -62,13 +76,29 @@ export function TableView() {
     pageSize: Number(localStorage.getItem("brick-page-size")) || 50,
   });
   const [filters, setFilters] = useState<FilterCondition[]>([]);
-  const { columnOptions, setColumnOptions } = useColumnOptions(tableName, bricked);
-  const [configuringColumn, setConfiguringColumn] = useState<string | null>(null);
+  const { columnOptions, setColumnOptions } = useColumnOptions(
+    tableName,
+    bricked,
+  );
+  const [configuringColumn, setConfiguringColumn] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     if (tableName) {
       setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-      setFilters([]);
+      const params = new URLSearchParams(window.location.search);
+      const f = params.get("filters");
+      if (f) {
+        try {
+          setFilters(JSON.parse(f) as FilterCondition[]);
+        } catch {
+          setFilters([]);
+        }
+        window.history.replaceState({}, "", window.location.pathname);
+      } else {
+        setFilters([]);
+      }
     }
   }, [tableName]);
 
@@ -81,11 +111,12 @@ export function TableView() {
   const { data: schemaResult } = useQuery({
     queryKey: ["table-schema", tableName],
     queryFn: async () => {
-      const res = await fetch(`/api/tables/${tableName}/schema`).then((r) =>
+      const res = (await fetch(`/api/tables/${tableName}/schema`).then((r) =>
         r.json(),
-      );
-      if (res.error) throw new Error(res.error);
-      return res.columns as SchemaColumn[];
+      )) as SchemaResult;
+      if ((res as unknown as { error: string }).error)
+        throw new Error((res as unknown as { error: string }).error);
+      return res;
     },
     enabled: !!tableName,
   });
@@ -118,8 +149,41 @@ export function TableView() {
     placeholderData: (prev) => prev,
   });
 
-  const schema = schemaResult ?? [];
+  const schema = schemaResult?.columns ?? [];
+  const foreignKeys = schemaResult?.foreignKeys ?? [];
   const data = tableResult ?? null;
+
+  const fkMap = useMemo(() => {
+    const map: Record<string, ForeignKey> = {};
+    for (const fk of foreignKeys) {
+      map[fk.from] = fk;
+    }
+    return map;
+  }, [foreignKeys]);
+
+  const fkTables = useMemo(
+    () => [...new Set(foreignKeys.map((fk) => fk.table))],
+    [foreignKeys],
+  );
+
+  const { data: lookups } = useQuery({
+    queryKey: ["fk-lookups", tableName, fkTables],
+    queryFn: async () => {
+      const results: Record<string, Record<string, string>> = {};
+      await Promise.all(
+        fkTables.map(async (t) => {
+          const res = await fetch(`/api/tables/${t}/lookup`).then((r) =>
+            r.json(),
+          );
+          if (res.lookup) results[t] = res.lookup;
+        }),
+      );
+      return results;
+    },
+    enabled: fkTables.length > 0,
+  });
+
+  const navigate = useNavigate();
 
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: ["table", tableName] });
@@ -164,6 +228,26 @@ export function TableView() {
           </span>
         );
       }
+      const fk = fkMap[col.name];
+      if (fk && v !== null && v !== undefined) {
+        const displayValue = lookups?.[fk.table]?.[String(v)];
+        return (
+          <button
+            type="button"
+            className="inline-block px-1.5 py-0.5 text-xs rounded font-medium bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground cursor-pointer transition-colors"
+            onClick={() => {
+              const filter: FilterCondition[] = [
+                { column: fk.to, op: "=", value: String(v) },
+              ];
+              navigate(
+                `/table/${fk.table}?filters=${encodeURIComponent(JSON.stringify(filter))}`,
+              );
+            }}
+          >
+            {displayValue ?? String(v)}
+          </button>
+        );
+      }
       return <CellContent value={v} />;
     },
   }));
@@ -173,44 +257,46 @@ export function TableView() {
   return (
     <>
       <DataTable
-      columns={columns}
-      data={data.rows}
-      filters={filters}
-      onFiltersChange={setFilters}
-      sidebarCollapsed={collapsed}
-      onToggleSidebar={() => setCollapsed((c: boolean) => !c)}
-      totalRows={data.total}
-      pagination={pagination}
-      onPaginationChange={setPagination}
-      pageCount={Math.ceil(data.total / pagination.pageSize)}
-      onRefresh={invalidate}
-      tableName={tableName}
-      pkColumn={pkColumn}
-      schema={schema}
-      editMode={editMode}
-      columnOptions={columnOptions}
-      onConfigureColumnOptions={setConfiguringColumn}
-      onDeleteRows={
-        pkColumn
-          ? async (rows) => {
-              const ids = rows.map(
-                (r) => (r as Record<string, unknown>)[pkColumn],
-              );
-              await Promise.all(
-                ids.map((id) =>
-                  fetch(`/api/tables/${tableName}/${id}`, { method: "DELETE" }),
-                ),
-              );
-              invalidate();
-            }
-          : undefined
-      }
+        columns={columns}
+        data={data.rows}
+        filters={filters}
+        onFiltersChange={setFilters}
+        sidebarCollapsed={collapsed}
+        onToggleSidebar={() => setCollapsed((c: boolean) => !c)}
+        totalRows={data.total}
+        pagination={pagination}
+        onPaginationChange={setPagination}
+        pageCount={Math.ceil(data.total / pagination.pageSize)}
+        onRefresh={invalidate}
+        tableName={tableName}
+        pkColumn={pkColumn}
+        schema={schema}
+        editMode={editMode}
+        columnOptions={columnOptions}
+        onConfigureColumnOptions={setConfiguringColumn}
+        onDeleteRows={
+          pkColumn
+            ? async (rows) => {
+                const ids = rows.map(
+                  (r) => (r as Record<string, unknown>)[pkColumn],
+                );
+                await Promise.all(
+                  ids.map((id) =>
+                    fetch(`/api/tables/${tableName}/${id}`, {
+                      method: "DELETE",
+                    }),
+                  ),
+                );
+                invalidate();
+              }
+            : undefined
+        }
       />
       {configuringColumn && (
         <ColumnOptionsDialog
-        column={configuringColumn}
-        currentOptions={columnOptions[configuringColumn] ?? []}
-        onSave={setColumnOptions}
+          column={configuringColumn}
+          currentOptions={columnOptions[configuringColumn] ?? []}
+          onSave={setColumnOptions}
           onClose={() => setConfiguringColumn(null)}
         />
       )}
