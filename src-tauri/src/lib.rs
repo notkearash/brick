@@ -1,3 +1,5 @@
+use tauri::Manager;
+
 #[cfg(target_os = "macos")]
 fn setup_window_menu() {
     use objc::runtime::{Class, Object, BOOL, YES};
@@ -52,6 +54,14 @@ pub fn run() {
 
             #[cfg(target_os = "macos")]
             setup_window_menu();
+
+            #[cfg(target_os = "macos")]
+            {
+                use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
+                let window = app.get_webview_window("main").unwrap();
+                apply_vibrancy(&window, NSVisualEffectMaterial::Sidebar, None, None)
+                    .expect("failed to apply vibrancy");
+            }
 
             Ok(())
         })

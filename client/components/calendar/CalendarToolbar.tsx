@@ -91,7 +91,7 @@ export function CalendarToolbar({
       </div>
 
       <div className="flex items-center gap-1">
-        <span className="text-xs text-muted-foreground mr-1">
+        <span className="text-xs font-mono text-muted-foreground mr-1">
           {eventCount} event{eventCount !== 1 ? "s" : ""}
         </span>
 

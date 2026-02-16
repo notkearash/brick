@@ -114,7 +114,7 @@ export function Layout() {
     <div className="flex h-screen">
       <aside
         className={cn(
-          "border-r bg-card flex flex-col shrink-0 transition-[width] duration-200",
+          "border-r bg-background/60 flex flex-col shrink-0 transition-[width] duration-200",
           collapsed ? "w-14" : "w-64",
         )}
       >
@@ -163,7 +163,7 @@ export function Layout() {
               <button
                 type="button"
                 className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors w-full cursor-pointer text-muted-foreground hover:text-foreground hover:ring-1 hover:ring-ring",
+                  "flex items-center gap-3 px-3 py-2 text-sm font-medium transition-all w-full cursor-pointer text-muted-foreground hover:text-foreground hover:shadow-[inset_0_2px_8px_rgba(57,57,62,0.5),inset_0_-1px_5px_rgba(57,57,62,0.25)] hover:bg-muted hover:rounded-[10px]",
                   collapsed && "justify-center px-0",
                 )}
                 onClick={() => setShowCreateTable(true)}
@@ -182,7 +182,7 @@ export function Layout() {
         />
       </aside>
 
-      <main className="flex-1 min-w-0 min-h-0 overflow-hidden">
+      <main className="flex-1 min-w-0 min-h-0 overflow-hidden bg-background">
         <Outlet
           context={{
             collapsed,

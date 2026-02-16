@@ -29,22 +29,30 @@ export function getTableIcon(iconType: TableIcon) {
 
 export const COLOR_CLASSES: Record<
   TableColor,
-  { active: string; inactive: string }
+  { activeExpanded: string; activeCollapsed: string; inactive: string }
 > = {
   none: {
-    active: "ring-primary text-primary",
+    activeExpanded:
+      "bg-sidebar text-foreground rounded-[10px] shadow-[inset_0_2px_8px_rgba(251,191,36,0.5),inset_0_-1px_5px_rgba(251,191,36,0.25)]",
+    activeCollapsed: "ring-1 ring-amber-400 text-foreground rounded-[6px]",
     inactive: "text-muted-foreground",
   },
   orange: {
-    active: "ring-orange-400 text-orange-400",
+    activeExpanded:
+      "bg-sidebar text-orange-400 rounded-[10px] shadow-[inset_0_2px_8px_rgba(251,146,60,0.5),inset_0_-1px_5px_rgba(251,146,60,0.25)]",
+    activeCollapsed: "ring-1 ring-orange-400 text-orange-400 rounded-[6px]",
     inactive: "text-orange-400",
   },
   purple: {
-    active: "ring-purple-400 text-purple-400",
+    activeExpanded:
+      "bg-sidebar text-purple-400 rounded-[10px] shadow-[inset_0_2px_8px_rgba(192,132,252,0.5),inset_0_-1px_5px_rgba(192,132,252,0.25)]",
+    activeCollapsed: "ring-1 ring-purple-400 text-purple-400 rounded-[6px]",
     inactive: "text-purple-400",
   },
   cyan: {
-    active: "ring-cyan-400 text-cyan-400",
+    activeExpanded:
+      "bg-sidebar text-cyan-400 rounded-[10px] shadow-[inset_0_2px_8px_rgba(34,211,238,0.5),inset_0_-1px_5px_rgba(34,211,238,0.25)]",
+    activeCollapsed: "ring-1 ring-cyan-400 text-cyan-400 rounded-[6px]",
     inactive: "text-cyan-400",
   },
 };

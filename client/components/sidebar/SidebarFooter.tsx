@@ -18,9 +18,11 @@ export function SidebarFooter({
       <button
         type="button"
         className={cn(
-          "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors w-full cursor-pointer",
+          "flex items-center gap-3 px-3 py-2 text-sm font-medium transition-all w-full cursor-pointer",
           editMode
-            ? "text-primary"
+            ? collapsed
+              ? "ring-1 ring-primary text-primary rounded-[6px]"
+              : "bg-sidebar text-foreground rounded-[10px] shadow-[inset_0_2px_6px_rgba(0,0,0,0.12),inset_0_-1px_4px_rgba(0,0,0,0.06)]"
             : "text-muted-foreground opacity-60 hover:opacity-100",
           collapsed && "justify-center px-0",
         )}
@@ -38,9 +40,11 @@ export function SidebarFooter({
         to="/settings"
         className={({ isActive }) =>
           cn(
-            "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+            "flex items-center gap-3 px-3 py-2 text-sm font-medium transition-all",
             isActive
-              ? "text-primary"
+              ? collapsed
+                ? "ring-1 ring-primary text-primary rounded-[6px]"
+                : "bg-sidebar text-foreground rounded-[10px] shadow-[inset_0_2px_6px_rgba(0,0,0,0.12),inset_0_-1px_4px_rgba(0,0,0,0.06)]"
               : "text-muted-foreground opacity-60 hover:opacity-100",
             collapsed && "justify-center px-0",
           )

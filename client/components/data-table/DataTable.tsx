@@ -450,7 +450,7 @@ export function DataTable<TData, TValue>({
         </div>
 
         <div className="flex items-center gap-1">
-          <span className="text-xs text-muted-foreground mr-1">
+          <span className="text-xs font-mono text-muted-foreground mr-1">
             {totalRows ?? data.length} rows
           </span>
 
@@ -474,7 +474,7 @@ export function DataTable<TData, TValue>({
               localStorage.setItem("brick-page-size", String(s));
               e.target.blur();
             }}
-            className="h-7 bg-transparent text-xs tabular-nums text-muted-foreground border rounded px-1 cursor-pointer"
+            className="h-7 bg-transparent text-xs font-mono tabular-nums text-muted-foreground border rounded px-1 cursor-pointer"
           >
             {[25, 50, 100, 250].map((size) => (
               <option key={size} value={size}>
@@ -482,7 +482,7 @@ export function DataTable<TData, TValue>({
               </option>
             ))}
           </select>
-          <span className="text-xs tabular-nums text-muted-foreground">
+          <span className="text-xs font-mono tabular-nums text-muted-foreground">
             {table.getState().pagination.pageIndex + 1}/{table.getPageCount()}
           </span>
           <Button
