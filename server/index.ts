@@ -240,6 +240,60 @@ app.get("/api/tables/:name/schema", (c) => {
   return c.json({ columns, foreignKeys });
 });
 
+app.get("/api/tables/:name/lookup", (c) => {
+  const db = getDb();
+  if (!db) {
+    return c.json({ error: "No database configured" }, 400);
+  }
+
+  const tableName = c.req.param("name");
+
+  const tableExists = db
+    .query("SELECT name FROM sqlite_master WHERE type='table' AND name = ?")
+    .get(tableName);
+
+  if (!tableExists) {
+    return c.json({ error: "Table not found" }, 404);
+  }
+
+  const columns = db.query(`PRAGMA table_info('${tableName}')`).all() as {
+    name: string;
+    type: string;
+    pk: number;
+  }[];
+
+  const pkCol = columns.find((col) => col.pk === 1);
+  if (!pkCol) {
+    return c.json({ error: "No primary key found" }, 400);
+  }
+
+  const textCols = columns.filter(
+    (col) => col.type.toUpperCase().includes("TEXT") || col.type.toUpperCase().includes("VARCHAR"),
+  );
+  const displayCol =
+    columns.find((col) => col.name === "name") ??
+    columns.find((col) => col.name === "title") ??
+    textCols[0];
+
+  if (!displayCol) {
+    return c.json({ error: "No display column found" }, 400);
+  }
+
+  const rows = db
+    .query(
+      `SELECT "${pkCol.name}", "${displayCol.name}" FROM '${tableName}' LIMIT 1000`,
+    )
+    .all() as Record<string, unknown>[];
+
+  const lookup: Record<string, string> = {};
+  for (const row of rows) {
+    const key = String(row[pkCol.name]);
+    lookup[key] = String(row[displayCol.name] ?? key);
+  }
+
+  return c.json({ lookup, displayColumn: displayCol.name });
+});
+
 app.get("/api/tables/:name", (c) => {
   const db = getDb();
   if (!db) {
