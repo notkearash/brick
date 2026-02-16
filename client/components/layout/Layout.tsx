@@ -163,7 +163,7 @@ export function Layout() {
               <button
                 type="button"
                 className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors w-full cursor-pointer text-muted-foreground hover:text-foreground hover:ring-1 hover:ring-ring",
+                  "flex items-center gap-3 px-3 py-2 text-sm font-medium transition-all w-full cursor-pointer text-muted-foreground hover:text-foreground hover:shadow-[inset_0_2px_8px_rgba(57,57,62,0.5),inset_0_-1px_5px_rgba(57,57,62,0.25)] hover:bg-muted hover:rounded-[10px]",
                   collapsed && "justify-center px-0",
                 )}
                 onClick={() => setShowCreateTable(true)}

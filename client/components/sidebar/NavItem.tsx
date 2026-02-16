@@ -54,10 +54,15 @@ export function NavItem({
       to={`${linkBase}/${table}`}
       className={({ isActive }) =>
         cn(
-          "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+          "flex items-center gap-3 px-3 py-2 text-sm font-medium transition-all",
           isActive
-            ? cn("ring-1", colorClasses.active)
-            : cn("hover:ring-1 hover:ring-ring", colorClasses.inactive),
+            ? collapsed
+              ? colorClasses.activeCollapsed
+              : colorClasses.activeExpanded
+            : cn(
+                colorClasses.inactive,
+                "hover:shadow-[inset_0_2px_8px_rgba(57,57,62,0.5),inset_0_-1px_5px_rgba(57,57,62,0.25)] hover:bg-muted hover:rounded-[10px]",
+              ),
           collapsed && "justify-center px-0",
           showGrip && "pr-8",
         )
