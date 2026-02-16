@@ -102,6 +102,7 @@ export function DataTable<TData, TValue>({
 
   const columnsRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const selectColumn: ColumnDef<TData, TValue> = {
     id: "_select",
@@ -214,6 +215,19 @@ export function DataTable<TData, TValue>({
   useEffect(() => {
     if (!editMode) setRowSelection({});
   }, [editMode]);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    function handleWheel(e: WheelEvent) {
+      if (!el) return;
+      e.preventDefault();
+      el.scrollLeft += e.deltaX;
+      el.scrollTop += e.deltaY;
+    }
+    el.addEventListener("wheel", handleWheel, { passive: false });
+    return () => el.removeEventListener("wheel", handleWheel);
+  }, []);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -532,7 +546,7 @@ export function DataTable<TData, TValue>({
           />
         ))}
 
-      <div className="flex-1 overflow-auto min-h-0">
+      <div ref={scrollRef} className="flex-1 overflow-auto min-h-0">
         <Table>
           <TableHeader className="sticky top-0 bg-background z-10">
             {table.getHeaderGroups().map((headerGroup) => (
